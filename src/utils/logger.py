@@ -22,7 +22,7 @@ def _load_config(config_path: Path) -> None:
 
 def setup_logger(
     name:str, 
-    config_path: Path = "config/logging_config.yaml"
+    config_path: Path = "config/logging_config.yml"
     ) -> logging.Logger:
     _load_config(Path(config_path))
     return logging.getLogger(name)

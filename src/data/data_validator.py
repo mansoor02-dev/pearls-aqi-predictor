@@ -49,7 +49,7 @@ class DataValidator:
         for idx, row in df.iterrows():
             try:
                 RawDataSchema(**row.to_dict())
-            except ValidationError as e:
+            except DataValidationError as e:
                 for err_dict in e.errors():
                     validation_errors.append({
                         **err_dict,
@@ -57,9 +57,7 @@ class DataValidator:
                         "input": row.to_dict() # Optionally add the input data that caused the error
                     })
         if validation_errors:
-            raise ValidationError.from_exception_data(
-                "RawDataSchema validation", validation_errors
-            )
+            raise DataValidationError(f"{len(validation_errors)} row(s) failed: {validation_errors[:3]}")
         
         null_rates = df.isnull().mean() * 100
         bad_cols = null_rates[null_rates > 5]
@@ -76,8 +74,8 @@ class DataValidator:
 
         return df
 
-    def build_reference_stats(train_df: pd.DataFrame) -> dict:
-        columns=train_df.columns
+    def build_reference_stats(self, train_df: pd.DataFrame) -> dict:
+        columns=train_df.select_dtypes(include=["number"]).columns
         return {
             col: {"mean": train_df[col].mean(), "std": train_df[col].std()}
             for col in columns

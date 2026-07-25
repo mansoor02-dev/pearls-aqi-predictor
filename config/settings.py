@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     FEATURE_GROUP_NAME: str = "aqi_features"
     FEATURE_GROUP_VERSION: int = 1
     FEATURE_VIEW_NAME: str = "aqi_training_view"
+    FEATURE_VIEW_VERSION: int = 1
     
     # Model Registry
     MODEL_NAME: str = "aqi_forecaster"
