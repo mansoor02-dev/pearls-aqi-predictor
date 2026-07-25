@@ -49,7 +49,7 @@ class OpenMeteoClient(BaseAPIClient):
 
     # ---- shared internals ----------------------------------------------
 
-    def fetch_current(self, url: str, variables: List[str], city: str,
+    def _fetch_current(self, url: str, variables: List[str], city: str,
                         lat: float, lon: float, prefix: str = "") -> Dict[str, Any]:
         params = {"latitude": lat, "longitude": lon, "current": variables, "timezone": "auto"}
         self.logger.info(f"Fetching current data from {url} for {city} ({lat}, {lon})")
@@ -70,7 +70,7 @@ class OpenMeteoClient(BaseAPIClient):
             self.logger.error(f"Request failed: {e}")
             raise APIClientError(f"OpenMeteo current request failed ({url}): {e}")
 
-    def fetch_historical(self, url: str, variables: List[str], city: str,
+    def _fetch_historical(self, url: str, variables: List[str], city: str,
                            lat: float, lon: float, start_date: str, end_date: str) -> list:
         params = {
             "latitude": lat, "longitude": lon, "hourly": variables,
@@ -98,19 +98,19 @@ class OpenMeteoClient(BaseAPIClient):
 
     # ---- public API -------------------------------------------------------
 
-    def fetch_current_aqi(self, city: str, lat: float, lon: float) -> Dict[str, Any]:
-        return self.fetch_current(self.AQI_URL, AQI_VARIABLES, city, lat, lon, prefix="current_")
+    def fetch_current(self, city: str, lat: float, lon: float) -> Dict[str, Any]:
+        return self._fetch_current(self.AQI_URL, AQI_VARIABLES, city, lat, lon, prefix="current_")
 
-    def fetch_historical_aqi(self, city: str, lat: float, lon: float,
+    def fetch_historical(self, city: str, lat: float, lon: float,
                           start_date: str, end_date: str) -> list:
-        return self.fetch_historical(self.AQI_URL, AQI_VARIABLES, city, lat, lon, start_date, end_date)
+        return self._fetch_historical(self.AQI_URL, AQI_VARIABLES, city, lat, lon, start_date, end_date)
 
     def fetch_current_weather(self, city: str, lat: float, lon: float) -> Dict[str, Any]:
-        return self.fetch_current(self.WEATHER_URL, WEATHER_VARIABLES, city, lat, lon)
+        return self._fetch_current(self.WEATHER_URL, WEATHER_VARIABLES, city, lat, lon)
 
     def fetch_historical_weather(self, city: str, lat: float, lon: float,
                               start_date: str, end_date: str) -> list:
-        return self.fetch_historical(self.WEATHER_URL, WEATHER_VARIABLES, city, lat, lon, start_date, end_date)
+        return self._fetch_historical(self.WEATHER_URL, WEATHER_VARIABLES, city, lat, lon, start_date, end_date)
 
 class APIClientFactory:
     """Factory to get the active client. Only OpenMeteo is wired up."""

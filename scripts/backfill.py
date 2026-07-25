@@ -23,7 +23,7 @@ def backfill_historical_data(start_date: str, end_date: str):
 
     # Fetch the ENTIRE range in a single call each — not looped per day.
     # Lag/rolling features need continuous history to compute correctly.
-    aqi_records = client.fetch_historical_aqi(
+    aqi_records = client.fetch_historical(
         city="Lahore", lat=31.558, lon=74.351,
         start_date=start_date, end_date=end_date,
     )
