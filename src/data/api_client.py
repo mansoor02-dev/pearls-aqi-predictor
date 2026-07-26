@@ -12,11 +12,9 @@ from src.utils.logger import setup_logger
 
 AQI_VARIABLES = [
     "pm10", "pm2_5", "carbon_monoxide", "nitrogen_dioxide",
-    "sulphur_dioxide", "ozone", "dust", "uv_index",
-    "uv_index_clear_sky", "aerosol_optical_depth", "european_aqi",
+    "sulphur_dioxide", "ozone", "uv_index",
+    "aerosol_optical_depth", "european_aqi",
 ]
-WEATHER_VARIABLES = ["temperature_2m", "relative_humidity_2m", "wind_speed_10m", "rain"]
-
 
 class BaseAPIClient(ABC):
     """Abstract base for all API clients."""
@@ -34,12 +32,10 @@ class BaseAPIClient(ABC):
                           start_date: str, end_date: str) -> list:
         pass
 
-
 class OpenMeteoClient(BaseAPIClient):
     """Open-Meteo AQI + Weather client (no API key needed)."""
 
     AQI_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
-    WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
 
     def __init__(self):
         super().__init__()
@@ -104,13 +100,6 @@ class OpenMeteoClient(BaseAPIClient):
     def fetch_historical(self, city: str, lat: float, lon: float,
                           start_date: str, end_date: str) -> list:
         return self._fetch_historical(self.AQI_URL, AQI_VARIABLES, city, lat, lon, start_date, end_date)
-
-    def fetch_current_weather(self, city: str, lat: float, lon: float) -> Dict[str, Any]:
-        return self._fetch_current(self.WEATHER_URL, WEATHER_VARIABLES, city, lat, lon)
-
-    def fetch_historical_weather(self, city: str, lat: float, lon: float,
-                              start_date: str, end_date: str) -> list:
-        return self._fetch_historical(self.WEATHER_URL, WEATHER_VARIABLES, city, lat, lon, start_date, end_date)
 
 class APIClientFactory:
     """Factory to get the active client. Only OpenMeteo is wired up."""

@@ -17,19 +17,13 @@ class RawDataSchema(BaseModel):
     city: str
     lat: float
     lon: float
-    temperature_2m : Optional[float] = Field(..., ge=-273.15, le=60)
-    relative_humidity_2m : Optional[float] = Field(..., ge=0)
-    wind_speed_10m : Optional[float] = Field(..., ge=0)
-    rain: Optional[float] = Field(None, ge=0)
     pm10: Optional[float] = Field(None, ge=0)
     pm2_5: Optional[float] = Field(None, ge=0)
     carbon_monoxide: Optional[float] = Field(None, ge=0)
     nitrogen_dioxide: Optional[float] = Field(None, ge=0)
     sulphur_dioxide: Optional[float] = Field(None, ge=0)
     ozone: Optional[float] = Field(None, ge=0)
-    dust: Optional[float] = Field(None, ge=0)
     uv_index: Optional[float] = Field(None, ge=0)
-    uv_index_clear_sky: Optional[float] = Field(None, ge=0)
     aerosol_optical_depth: Optional[float] = Field(None, ge=0)
     european_aqi: float = Field(..., ge=0, le=500)
 

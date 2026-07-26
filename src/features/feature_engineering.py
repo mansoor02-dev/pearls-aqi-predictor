@@ -3,8 +3,8 @@ from sklearn.base import BaseEstimator, TransformerMixin
 import numpy as np
 import pandas as pd
 
-LAG_HOURS = [1, 3, 6, 24]
-ROLLING_WINDOWS = [6, 12, 24]
+LAG_HOURS = [1, 3]
+ROLLING_WINDOWS = [6, 12]
 
 
 class AQIFeatureEngineer(BaseEstimator, TransformerMixin):
@@ -57,10 +57,6 @@ class AQIFeatureEngineer(BaseEstimator, TransformerMixin):
         # 5. Rate of change
         df["aqi_change_1h"] = g.shift(1).diff(1)
         df["aqi_change_24h"] = g.shift(1).diff(24)
-
-        # 6. Weather interactions
-        df["temp_humidity"] = df["temperature_2m"] * df["relative_humidity_2m"]
-        df["wind_pm25"] = df["wind_speed_10m"] / (df["pm2_5"] + 1)  # +1 avoids div by zero
 
         # 7. Target creation (shift AQI forward, per city)
         for day in range(1, self.forecast_horizon + 1):
