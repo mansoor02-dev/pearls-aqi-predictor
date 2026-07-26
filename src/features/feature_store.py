@@ -39,7 +39,7 @@ class HopsworksFeatureStore:
             fg = self.fs.get_feature_group(name=name, version=version)
             self.logger.info(f"Found existing feature group: {name}_v{version}")
             return fg
-        except:
+        except DatasetException:
             # Create new feature group
             fg = self.fs.create_feature_group(
                 name=name,
@@ -78,12 +78,12 @@ class HopsworksFeatureStore:
             fv = self.fs.get_feature_view(name=feature_view_name, version=settings.FEATURE_VIEW_VERSION)
             self.logger.info(f"Found existing feature view: {feature_view_name}_v{settings.FEATURE_VIEW_VERSION}")
        
-        except:
+        except DatasetException:
             fv = self.fs.create_feature_view(
                 name=feature_view_name,
                 version=settings.FEATURE_VIEW_VERSION,
                 query=query,
-                labels=[f"aqi_next_{d}d" for d in range(settings.FORECAST_HORIZON)]
+                labels=[f"aqi_next_{d}d" for d in range(1, settings.FORECAST_HORIZON + 1)]
             )
         self.logger.info(f"Created feature view: {feature_view_name}_v{settings.FEATURE_VIEW_VERSION}")
         # 3. Get training data with time split

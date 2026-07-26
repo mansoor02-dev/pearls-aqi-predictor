@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 import pandas as pd
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationError
 
 from src.utils.logger import setup_logger
 from src.utils.exceptions import DataValidationError
@@ -49,7 +49,7 @@ class DataValidator:
         for idx, row in df.iterrows():
             try:
                 RawDataSchema(**row.to_dict())
-            except DataValidationError as e:
+            except ValidationError as e:
                 for err_dict in e.errors():
                     validation_errors.append({
                         **err_dict,
