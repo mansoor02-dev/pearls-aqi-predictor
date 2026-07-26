@@ -44,18 +44,19 @@ class AQIFeatureEngineer(BaseEstimator, TransformerMixin):
             df[f"aqi_lag_{lag}h"] = g.shift(lag)
 
         # 4. Rolling statistics (shift(1) first so window never includes current row)
-        shifted = g.shift(1)
         for window in ROLLING_WINDOWS:
             df[f"aqi_roll_mean_{window}h"] = (
-                shifted.groupby(df["city"]).rolling(window).mean().reset_index(level=0, drop=True)
+                df.groupby("city")["european_aqi"]
+                .transform(lambda x: x.shift(1).rolling(window).mean())
             )
             df[f"aqi_roll_std_{window}h"] = (
-                shifted.groupby(df["city"]).rolling(window).std().reset_index(level=0, drop=True)
+                df.groupby("city")["european_aqi"]
+                .transform(lambda x: x.shift(1).rolling(window).std())
             )
 
         # 5. Rate of change
-        df["aqi_change_1h"] = g.diff(1)
-        df["aqi_change_24h"] = g.diff(24)
+        df["aqi_change_1h"] = g.shift(1).diff(1)
+        df["aqi_change_24h"] = g.shift(1).diff(24)
 
         # 6. Weather interactions
         df["temp_humidity"] = df["temperature_2m"] * df["relative_humidity_2m"]
@@ -64,9 +65,7 @@ class AQIFeatureEngineer(BaseEstimator, TransformerMixin):
         # 7. Target creation (shift AQI forward, per city)
         for day in range(1, self.forecast_horizon + 1):
             df[f"aqi_next_{day}d"] = df.groupby("city")["european_aqi"].shift(-day * 24)
-
-        # df = df.dropna()
-
+            
         self.feature_names_ = [c for c in df.columns if c not in ["date", "city"]]
         return df
 

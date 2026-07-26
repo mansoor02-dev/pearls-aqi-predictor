@@ -26,11 +26,11 @@ class BaseAPIClient(ABC):
         self.logger = setup_logger(self.__class__.__name__)
 
     @abstractmethod
-    def fetch_current(self, url: str, city: str, lat: float, lon: float) -> Dict[str, Any]:
+    def fetch_current(self, city: str, lat: float, lon: float) -> Dict[str, Any]:
         pass
 
     @abstractmethod
-    def fetch_historical(self, url: str, city: str, lat: float, lon: float,
+    def fetch_historical(self, city: str, lat: float, lon: float,
                           start_date: str, end_date: str) -> list:
         pass
 

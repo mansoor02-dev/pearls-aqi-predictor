@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import Optional
 
 import pandas as pd
-from pydantic import BaseModel, Field, field_validator, ValidationError
+from pydantic import BaseModel, Field, field_validator
 
 from src.utils.logger import setup_logger
 from src.utils.exceptions import DataValidationError

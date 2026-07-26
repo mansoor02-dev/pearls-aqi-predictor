@@ -45,6 +45,7 @@ dependencies = [
     "retry-requests>=2.0.0",
     "ipykernel>=7.3.0",
     "pyyaml>=6.0.3",
+    "seaborn>=0.13.2",
 ]
 
 [project.optional-dependencies]
