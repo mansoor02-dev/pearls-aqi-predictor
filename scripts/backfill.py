@@ -27,17 +27,11 @@ def backfill_historical_data(start_date: str, end_date: str):
         city="Lahore", lat=31.558, lon=74.351,
         start_date=start_date, end_date=end_date,
     )
-    weather_records = client.fetch_historical_weather(
-        city="Lahore", lat=31.558, lon=74.351,
-        start_date=start_date, end_date=end_date,
-    )
 
     aqi_df = pd.DataFrame(aqi_records)
-    weather_df = pd.DataFrame(weather_records)
-    raw_df = pd.merge(aqi_df, weather_df, on=["date", "city", "lat", "lon"])
 
-    logger.info(f"Validating {len(raw_df)} raw rows")
-    validated_df = validator.validate_raw_data(raw_df)
+    logger.info(f"Validating {len(aqi_df)} raw rows")
+    validated_df = validator.validate_raw_data(aqi_df)
 
     logger.info("Engineering features")
     feature_engineer = AQIFeatureEngineer(forecast_horizon=settings.FORECAST_HORIZON)
