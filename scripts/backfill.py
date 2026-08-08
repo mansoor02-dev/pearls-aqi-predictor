@@ -21,16 +21,19 @@ def backfill_historical_data(start_date: str, end_date: str):
     client = APIClientFactory.get_primary_client()
     validator = DataValidator()
 
-    # Fetch the ENTIRE range in a single call each — not looped per day.
-    # Lag/rolling features need continuous history to compute correctly.
     aqi_records = client.fetch_historical(
         city="Lahore", start_date=start_date, end_date=end_date,
     )
-
+    weather_records = client.fetch_historical_weather(
+        city="Lahore", start_date=start_date, end_date=end_date,
+    )
+    
     aqi_df = pd.DataFrame(aqi_records)
-
-    logger.info(f"Validating {len(aqi_df)} raw rows")
-    validated_df = validator.validate_raw_data(aqi_df)
+    weather_df = pd.DataFramer(weather_records)
+    
+    merged_df = pd.merge(weather_df, aqi_df, on=['date', 'city', 'lat', 'lon'])
+    logger.info(f"Validating {len(merged_df)} raw rows")
+    validated_df = validator.validate_raw_data(merged_df)
 
     logger.info("Engineering features")
     feature_engineer = AQIFeatureEngineer(forecast_horizon=settings.FORECAST_HORIZON)
