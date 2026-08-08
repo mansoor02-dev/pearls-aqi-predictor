@@ -3,6 +3,7 @@ from typing import Dict, Any
 
 import hopsworks
 import matplotlib.pyplot as plt
+import torch
 
 from src.features.feature_store import HopsworksFeatureStore
 from src.models.model_registry import HopsworksModelRegistry
@@ -17,8 +18,8 @@ MODEL_SPECS = {
     "linear": ("linear", SklearnAQIModel),
     "random_forest": ("random_forest", SklearnAQIModel),
     "xgboost": ("xgboost", SklearnAQIModel),
-    "ffn": ("ffn", FeedForwardAQIModel),
-    "lstm": ("lstm", LSTMAQIModel),
+    "ffn": (None, FeedForwardAQIModel),
+    "lstm": (None, LSTMAQIModel),
 }
 
 
@@ -40,7 +41,8 @@ class TrainingPipeline:
         self.logger = logger
 
     def run(self) -> Dict[int, Dict[str, Any]]:
-        training_data = self.fs.get_training_data()
+        training_data = self.fs.get_training_data(settings.FEATURE_VIEW_NAME,
+                            start_date="2022-01-01", end_date="2026-07-31")
 
         all_results: Dict[int, Dict[str, Any]] = {}
 
@@ -123,6 +125,10 @@ class TrainingPipeline:
         os.makedirs("docs", exist_ok=True)
         sample = X_test[:200] if hasattr(X_test, "__len__") and len(X_test) > 200 else X_test
 
+        if isinstance(model, LSTMAQIModel):
+            self.logger.info("Skipping SHAP for LSTM — needs GradientExplainer for sequence input"); 
+            return
+
         if isinstance(model, SklearnAQIModel) and model.model_type in ("random_forest", "xgboost"):
             explainer = shap.TreeExplainer(model.model)
             shap_values = explainer.shap_values(sample)
@@ -130,8 +136,12 @@ class TrainingPipeline:
             explainer = shap.LinearExplainer(model.model, sample)
             shap_values = explainer.shap_values(sample)
         else:
+            def torch_predict(x):
+                model.model.eval()
+                with torch.no_grad():
+                    return model.model(torch.tensor(x, dtype=torch.float32)).cpu().numpy().ravel()
             background = sample[:50]
-            explainer = shap.KernelExplainer(lambda x: model.model.predict(x), background)
+            explainer = shap.KernelExplainer(torch_predict, background)
             shap_values = explainer.shap_values(sample)
 
         plt.figure()

@@ -1,5 +1,6 @@
 from datetime import datetime
 import pandas as pd
+import hopsworks
 
 from config.settings import settings
 from src.utils.logger import setup_logger
@@ -22,14 +23,14 @@ def backfill_historical_data(start_date: str, end_date: str):
     validator = DataValidator()
 
     aqi_records = client.fetch_historical(
-        city="Lahore", start_date=start_date, end_date=end_date,
+        city=settings.CITY, start_date=start_date, end_date=end_date,
     )
     weather_records = client.fetch_historical_weather(
-        city="Lahore", start_date=start_date, end_date=end_date,
+        city=settings.CITY, start_date=start_date, end_date=end_date,
     )
     
     aqi_df = pd.DataFrame(aqi_records)
-    weather_df = pd.DataFramer(weather_records)
+    weather_df = pd.DataFrame(weather_records)
     
     merged_df = pd.merge(weather_df, aqi_df, on=['date', 'city', 'lat', 'lon'])
     logger.info(f"Validating {len(merged_df)} raw rows")
@@ -42,11 +43,13 @@ def backfill_historical_data(start_date: str, end_date: str):
     logger.info(f"Validating {len(engineered_df)} engineered rows")
     engineered_df = validator.validate_features(engineered_df)
 
-    fs = HopsworksFeatureStore(
-        api_key=settings.HOPSWORKS_API_KEY,
-        project_name=settings.HOPSWORKS_PROJECT_NAME,
-        host=settings.HOPSWORKS_HOST,
-    )
+    project = hopsworks.login(
+    api_key_value=settings.HOPSWORKS_API_KEY,
+    project=settings.HOPSWORKS_PROJECT_NAME,
+    host=settings.HOPSWORKS_HOST,
+)
+    fs = HopsworksFeatureStore(project)
+    
     fg = fs.create_or_get_feature_group(
         name=settings.FEATURE_GROUP_NAME,
         version=settings.FEATURE_GROUP_VERSION,
@@ -59,3 +62,6 @@ def backfill_historical_data(start_date: str, end_date: str):
         settings.FEATURE_VIEW_NAME, start_date=start_date, end_date=end_date
     )
     return training_data
+
+if __name__ == "__main__":
+    backfill_historical_data(start_date="2022-01-01", end_date="2026-07-31")

@@ -62,7 +62,7 @@ class SklearnAQIModel(BaseAQIModel):
         split_idx = int(len(X) * (1 - test_frac))
         self.feature_names_ = X.columns.tolist()   # needed by get_feature_importance() below
         X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
-        if self.model_name == 'linear':
+        if self.model_type == 'linear':
             X_train = self.scaler.fit_transform(X_train)
             X_test = self.scaler.transform(X_test)
         return {
