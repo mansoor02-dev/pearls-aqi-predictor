@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.linear_model import Ridge
 from sklearn.multioutput import MultiOutputRegressor
-from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error
+from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, root_mean_squared_error
 import joblib # from making process parallel
 
 from src.utils.logger import setup_logger
@@ -20,10 +20,10 @@ class SklearnAQIModel(BaseAQIModel):
                 max_depth=15,
                 random_state=42,
                 min_samples_split=5,
-                n_jobs=-1 # Run all processes in parallel
+                n_jobs=-1
             )
         elif model_type == "linear":
-            base_model = Ridge(alpha=0.1)
+            base_model = Ridge(alpha=0.1, random_state=42, solver='auto')
         else:
             raise ValueError(f"Unknown model type {model_type}")
         

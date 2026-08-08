@@ -17,6 +17,14 @@ class RawDataSchema(BaseModel):
     city: str
     lat: float
     lon: float
+    temperature_2m: Optional[float] = Field(None)
+    wind_direction_10m: Optional[float] = Field(None)
+    wind_speed_10m: Optional[float] = Field(None)
+    rain: Optional[float] = Field(None)
+    weather_code: Optional[float] = Field(None)
+    wind_gusts_10m: Optional[float] = Field(None)
+    cloud_cover: Optional[float] = Field(None)
+    relative_humidity_2m: Optional[float] = Field(None)
     pm10: Optional[float] = Field(None, ge=0)
     pm2_5: Optional[float] = Field(None, ge=0)
     carbon_monoxide: Optional[float] = Field(None, ge=0)
@@ -26,7 +34,8 @@ class RawDataSchema(BaseModel):
     uv_index: Optional[float] = Field(None, ge=0)
     aerosol_optical_depth: Optional[float] = Field(None, ge=0)
     european_aqi: float = Field(..., ge=0, le=500)
-
+    
+    
     @field_validator("european_aqi")
     @classmethod
     def aqi_must_be_reasonable(cls, v):

@@ -34,7 +34,7 @@ class LSTMAQIModel(BaseAQIModel):
             Dense(32, activation='relu'),
             Dense(self.forecast_horizon)  # Output: 3 days
         ])
-        model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+        model.compile(optimizer='adam', loss='mse', metrics=['mae', 'rmse'])
         return model
     
     def preprocess(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray]:

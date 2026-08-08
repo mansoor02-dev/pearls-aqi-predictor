@@ -9,11 +9,16 @@ from retry_requests import retry
 
 from src.utils.exceptions import APIClientError
 from src.utils.logger import setup_logger
+from src.data.city_coordinates import resolve_city
 
 AQI_VARIABLES = [
     "pm10", "pm2_5", "carbon_monoxide", "nitrogen_dioxide",
-    "sulphur_dioxide", "ozone", "uv_index",
-    "aerosol_optical_depth", "european_aqi",
+    "sulphur_dioxide", "ozone", "uv_index", "aerosol_optical_depth", "european_aqi",
+]
+
+WEATHER_VARIABLES = [
+    "temperature_2m", "wind_direction_10m", "wind_speed_10m", "rain",
+    "weather_code", "wind_gusts_10m", "cloud_cover", "relative_humidity_2m",
 ]
 
 class BaseAPIClient(ABC):
@@ -24,19 +29,28 @@ class BaseAPIClient(ABC):
         self.logger = setup_logger(self.__class__.__name__)
 
     @abstractmethod
-    def fetch_current(self, city: str, lat: float, lon: float) -> Dict[str, Any]:
+    def fetch_current(self, city: str) -> Dict[str, Any]:
         pass
 
     @abstractmethod
-    def fetch_historical(self, city: str, lat: float, lon: float,
-                          start_date: str, end_date: str) -> list:
+    def fetch_historical(self, city: str, start_date: str, end_date: str) -> list:
         pass
 
+    @abstractmethod
+    def fetch_current_weather(self, city: str) -> Dict[str, Any]:
+        pass
+
+    @abstractmethod
+    def fetch_historical_weather(self, city: str, start_date: str, end_date: str) -> list:
+        pass
+    
 class OpenMeteoClient(BaseAPIClient):
     """Open-Meteo AQI + Weather client (no API key needed)."""
 
     AQI_URL = "https://air-quality-api.open-meteo.com/v1/air-quality"
-
+    WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
+    WEATHER_HISTORY_URL = "https://archive-api.open-meteo.com/v1/archive"
+    
     def __init__(self):
         super().__init__()
         cache_session = requests_cache.CachedSession(".cache", expire_after=3600)
@@ -94,12 +108,21 @@ class OpenMeteoClient(BaseAPIClient):
 
     # ---- public API -------------------------------------------------------
 
-    def fetch_current(self, city: str, lat: float, lon: float) -> Dict[str, Any]:
-        return self._fetch_current(self.AQI_URL, AQI_VARIABLES, city, lat, lon, prefix="current_")
+    def fetch_current(self, city: str) -> Dict[str, Any]:
+        lat, lon = resolve_city(city)
+        return self._fetch_current(self.AQI_URL, AQI_VARIABLES, city, lat, lon)
 
-    def fetch_historical(self, city: str, lat: float, lon: float,
-                          start_date: str, end_date: str) -> list:
+    def fetch_historical(self, city: str, start_date: str, end_date: str) -> list:
+        lat, lon = resolve_city(city)
         return self._fetch_historical(self.AQI_URL, AQI_VARIABLES, city, lat, lon, start_date, end_date)
+
+    def fetch_current_weather(self, city: str) -> Dict[str, Any]:
+        lat, lon = resolve_city(city)
+        return self._fetch_current(self.WEATHER_URL, WEATHER_VARIABLES, city, lat, lon)
+
+    def fetch_historical_weather(self, city: str, start_date: str, end_date: str) -> list:
+        lat, lon = resolve_city(city)
+        return self._fetch_historical(self.WEATHER_HISTORY_URL, WEATHER_VARIABLES, city, lat, lon, start_date, end_date)
 
 class APIClientFactory:
     """Factory to get the active client. Only OpenMeteo is wired up."""
