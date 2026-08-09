@@ -12,6 +12,8 @@ from src.models.model_registry import HopsworksModelRegistry
 from src.models.sklearn_models import SklearnAQIModel
 from src.models.deep_learning import FeedForwardAQIModel, LSTMAQIModel
 from src.utils.logger import setup_logger
+from src.utils.hopsworks_utils import login_hopsworks
+
 
 logger = setup_logger(__name__)
 
@@ -27,11 +29,7 @@ LOOKBACK_DAYS = 7
 
 
 def get_hopsworks_registry() -> HopsworksModelRegistry:
-    project = hopsworks.login(
-        api_key_value=settings.HOPSWORKS_API_KEY,
-        project=settings.HOPSWORKS_PROJECT_NAME,
-        host=settings.HOPSWORKS_HOST,
-    )
+    project = login_hopsworks()
     return HopsworksModelRegistry(project)
 
 
@@ -60,12 +58,10 @@ def get_latest_features(city: str) -> pd.DataFrame:
     end_date = datetime.now().strftime("%Y-%m-%d")
     start_date = (datetime.now() - timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%d")
 
-    aqi_df = pd.DataFrame(client.fetch_historical(city, start_date, end_date))
-    weather_df = pd.DataFrame(client.fetch_historical_weather(city, start_date, end_date))
-    merged_df = pd.merge(weather_df, aqi_df, on=["date", "city", "lat", "lon"])
-
+    merged_df = client.fetch_merged_historical(city, start_date, end_date)
     validated_df = validator.validate_raw_data(merged_df)
     return AQIFeatureEngineer(forecast_horizon=settings.FORECAST_HORIZON).fit_transform(validated_df)
+
 
 
 def predict_horizon(model, engineered_df: pd.DataFrame, current_aqi: float):

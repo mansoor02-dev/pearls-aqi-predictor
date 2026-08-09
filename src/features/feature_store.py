@@ -64,7 +64,7 @@ class HopsworksFeatureStore:
         self.logger.info(f"Created NEW schema version: {name}_v{fg.version} — update FEATURE_GROUP_VERSION in settings.py")
         return fg
 
-    def insert_features(self, feature_group, df: pd.DataFrame):
+    def insert_features(self, feature_group, df: pd.DataFrame, wait_for_job: bool = False):
         df = df.copy()    
         df["date"] = pd.to_datetime(df["date"])
         
@@ -73,8 +73,10 @@ class HopsworksFeatureStore:
         
         df["date"] = df["date"].astype("datetime64[us]") 
         
-        feature_group.insert(df, write_options={"wait_for_job": True})
-        self.logger.info(f"Inserted {len(df)} rows into feature group")
+        self.logger.info(f"Uploading {len(df)} rows to Hopsworks Feature Group '{feature_group.name}'...")
+        feature_group.insert(df, write_options={"wait_for_job": wait_for_job})
+        self.logger.info(f"Successfully uploaded {len(df)} rows into feature group '{feature_group.name}_v{feature_group.version}'!")
+
 
     def get_training_data(self, feature_view_name: str, start_date: str = None, end_date: str = None):    
         """Creates a feature view, materializes a versioned

@@ -124,6 +124,15 @@ class OpenMeteoClient(BaseAPIClient):
         lat, lon = resolve_city(city)
         return self._fetch_historical(self.WEATHER_HISTORY_URL, WEATHER_VARIABLES, city, lat, lon, start_date, end_date)
 
+    def fetch_merged_historical(self, city: str, start_date: str, end_date: str) -> pd.DataFrame:
+        """Fetch both AQI and Weather historical data and return a single merged DataFrame."""
+        aqi_records = self.fetch_historical(city=city, start_date=start_date, end_date=end_date)
+        weather_records = self.fetch_historical_weather(city=city, start_date=start_date, end_date=end_date)
+        aqi_df = pd.DataFrame(aqi_records)
+        weather_df = pd.DataFrame(weather_records)
+        return pd.merge(weather_df, aqi_df, on=['date', 'city', 'lat', 'lon'])
+
+
 class APIClientFactory:
     """Factory to get the active client. Only OpenMeteo is wired up."""
 

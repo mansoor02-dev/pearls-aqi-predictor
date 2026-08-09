@@ -10,7 +10,9 @@ from src.models.model_registry import HopsworksModelRegistry
 from src.models.sklearn_models import SklearnAQIModel
 from src.models.deep_learning import LSTMAQIModel, FeedForwardAQIModel
 from src.utils.logger import setup_logger
+from src.utils.hopsworks_utils import login_hopsworks
 from config.settings import settings
+
 
 logger = setup_logger(__name__)
 
@@ -34,15 +36,12 @@ class TrainingPipeline:
     """
 
     def __init__(self, horizons=(1, 2, 3)):
-        project = hopsworks.login(
-            api_key_value=settings.HOPSWORKS_API_KEY,
-            project=settings.HOPSWORKS_PROJECT_NAME,
-            host=settings.HOPSWORKS_HOST,
-        )
+        project = login_hopsworks()
         self.fs = HopsworksFeatureStore(project)
         self.mr = HopsworksModelRegistry(project)
         self.horizons = list(horizons)
         self.logger = logger
+
 
     def run(self) -> Dict[int, Dict[str, Any]]:
         training_data = self.fs.get_training_data(settings.FEATURE_VIEW_NAME,

@@ -58,20 +58,27 @@ uv sync
 
 ## 🚀 Running Pipelines & Services
 
-### Backfill Data
+### Backfill Historical Data
 ```bash
+uv run python -m scripts.run_backfill
+# OR
 uv run python scripts/run_backfill.py
 ```
 
 ### Run Feature Pipeline (Hourly Ingestion)
 ```bash
+uv run python -m scripts.run_feature_pipeline
+# OR
 uv run python scripts/run_feature_pipeline.py
 ```
 
 ### Run Model Training Pipeline
 ```bash
+uv run python -m scripts.run_training_pipeline
+# OR
 uv run python scripts/run_training_pipeline.py
 ```
+
 
 ### Launch Streamlit Dashboard
 ```bash
