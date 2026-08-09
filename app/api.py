@@ -7,14 +7,15 @@ import hopsworks
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
+from contextlib import asynccontextmanager
 
 from config.settings import settings
 from src.data.api_client import APIClientFactory
 from src.data.data_validator import DataValidator
 from src.features.feature_engineering import AQIFeatureEngineer
 from src.models.model_registry import HopsworksModelRegistry
-from src.models.sklearn_model import SklearnAQIModel
-from src.models.deeplearning_model import FeedForwardAQIModel, LSTMAQIModel
+from models.sklearn_models import SklearnAQIModel
+from models.deep_learning import FeedForwardAQIModel, LSTMAQIModel
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
@@ -47,10 +48,9 @@ class AQIPredictionResponse(BaseModel):
     current_aqi: float
     predictions: list[DayPrediction]
 
-def startup():
-    """Log in to Hopsworks ONCE at process start, not per-request — a fresh
-    login is a network round trip every time, and every request needs the
-    same registry handle anyway."""
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
     project = hopsworks.login(
         api_key_value=settings.HOPSWORKS_API_KEY,
         project=settings.HOPSWORKS_PROJECT_NAME,
@@ -59,10 +59,9 @@ def startup():
     app.state.mr = HopsworksModelRegistry(project)
     app.state.client = APIClientFactory.get_primary_client()
     app.state.validator = DataValidator()
+    yield 
 
-
-app = FastAPI(lifespan=startup())
-
+app = FastAPI(lifespan=lifespan)
 
 @app.get("/health")
 def health_check():

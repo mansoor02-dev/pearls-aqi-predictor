@@ -11,6 +11,7 @@ import xgboost as xgb
 
 from src.utils.logger import setup_logger
 from src.models.base_model import BaseAQIModel
+from src.models.evaluate import score_predictions
 
 logger = setup_logger(__name__)
 
@@ -96,25 +97,8 @@ class SklearnAQIModel(BaseAQIModel):
 
     def evaluate(self, X_test, y_test_raw, current_aqi_test, y_naive=None) -> Dict[str, float]:
         pred_raw = self.predict(X_test, current_aqi_test)
-
-        r2 = r2_score(y_test_raw, pred_raw)
-        mae = mean_absolute_error(y_test_raw, pred_raw)
-        mse = mean_squared_error(y_test_raw, pred_raw)
-        rmse = root_mean_squared_error(y_test_raw, pred_raw)
-
-        skill = None
-        if y_naive is not None:
-            naive_rmse = root_mean_squared_error(y_test_raw, y_naive)
-            skill = 1 - (rmse / naive_rmse) if naive_rmse > 0 else np.nan
-
-        self.metrics = {
-            "model": self.model_name, "horizon": f"{self.forecast_horizon}d",
-            "r2": r2, "mae": mae, "mse": mse, "rmse": rmse, "skill_vs_naive": skill,
-        }
-        skill_str = f"   Skill: {skill:+.3f}" if skill is not None else ""
-        logger.info(f"{self.model_name:32s}  R2: {r2:.4f}   MAE: {mae:.3f}   RMSE: {rmse:.3f}{skill_str}")
-        return self.metrics
-
+        return score_predictions(self.model_name, self.forecast_horizon, y_test_raw, pred_raw, y_naive)
+    
     def get_feature_importance(self) -> Dict[str, float]:
         if not self.is_trained or self.feature_names_ is None:
             return {}

@@ -7,8 +7,8 @@ import torch
 
 from src.features.feature_store import HopsworksFeatureStore
 from src.models.model_registry import HopsworksModelRegistry
-from src.models.sklearn_model import SklearnAQIModel
-from src.models.deeplearning_model import LSTMAQIModel, FeedForwardAQIModel
+from models.sklearn_models import SklearnAQIModel
+from models.deep_learning import LSTMAQIModel, FeedForwardAQIModel
 from src.utils.logger import setup_logger
 from config.settings import settings
 

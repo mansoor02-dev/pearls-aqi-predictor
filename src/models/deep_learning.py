@@ -11,6 +11,7 @@ from sklearn.metrics import r2_score, mean_absolute_error, mean_squared_error, r
 
 from src.models.base_model import BaseAQIModel
 from src.utils.logger import setup_logger
+from src.models.evaluate import score_predictions
 
 logger = setup_logger(__name__)
 
@@ -105,24 +106,6 @@ def _train_torch_model(model: nn.Module, train_loader: DataLoader, epochs: int =
     return loss_history
 
 
-def _score(model_name: str, forecast_horizon: int, y_true_raw, pred_raw, y_naive=None) -> Dict[str, float]:
-    r2 = r2_score(y_true_raw, pred_raw)
-    mae = mean_absolute_error(y_true_raw, pred_raw)
-    mse = mean_squared_error(y_true_raw, pred_raw)
-    rmse = root_mean_squared_error(y_true_raw, pred_raw)
-
-    skill = None
-    if y_naive is not None:
-        naive_rmse = root_mean_squared_error(y_true_raw, y_naive)
-        skill = 1 - (rmse / naive_rmse) if naive_rmse > 0 else np.nan
-
-    metrics = {"model": model_name, "horizon": f"{forecast_horizon}d",
-               "r2": r2, "mae": mae, "mse": mse, "rmse": rmse, "skill_vs_naive": skill}
-    skill_str = f"   Skill: {skill:+.3f}" if skill is not None else ""
-    logger.info(f"{model_name:32s}  R2: {r2:.4f}   MAE: {mae:.3f}   RMSE: {rmse:.3f}{skill_str}")
-    return metrics
-
-
 # ------------------------
 # Feed-Forward NN
 # ------------------------
@@ -181,7 +164,7 @@ class FeedForwardAQIModel(BaseAQIModel):
     
     def evaluate(self, X_test, y_test_raw, current_aqi_test, y_naive=None) -> Dict[str, float]:
         pred_raw = self.predict(X_test, current_aqi_test)
-        self.metrics = _score(self.model_name, self.forecast_horizon, y_test_raw, pred_raw, y_naive)
+        self.metrics = score_predictions(self.model_name, self.forecast_horizon, y_test_raw, pred_raw, y_naive)
         return self.metrics
 
     def get_feature_importance(self) -> Dict[str, float]:
@@ -271,9 +254,10 @@ class LSTMAQIModel(BaseAQIModel):
         pred_delta = self.y_scaler.inverse_transform(pred_scaled.reshape(-1, 1)).ravel()
         current_aqi = current_aqi.values if hasattr(current_aqi, "values") else np.asarray(current_aqi)
         return current_aqi + pred_delta
+    
     def evaluate(self, X_test, y_test_raw, current_aqi_test, y_naive=None) -> Dict[str, float]:
         pred_raw = self.predict(X_test, current_aqi_test)
-        self.metrics = _score(self.model_name, self.forecast_horizon, y_test_raw, pred_raw, y_naive)
+        self.metrics = score_predictions(self.model_name, self.forecast_horizon, y_test_raw, pred_raw, y_naive)
         return self.metrics
 
     def get_feature_importance(self) -> Dict[str, float]:
