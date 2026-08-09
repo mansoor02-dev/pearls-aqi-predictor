@@ -10,7 +10,7 @@ from src.features.backfill import backfill_historical_data
 from src.utils.logger import setup_logger
 
 logger = setup_logger("FeaturePipeline")
-LOOKBACK_DAYS = 5
+LOOKBACK_DAYS = 16
 
 
 def update_features(lookback_days: int = LOOKBACK_DAYS):

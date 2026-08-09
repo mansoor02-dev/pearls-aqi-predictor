@@ -53,6 +53,6 @@ def backfill_historical_data(start_date: str, end_date: str) -> pd.DataFrame:
         event_time="date",
     )
 
-    fs.insert_features(fg, engineered_df, wait_for_job=False)
+    fs.insert_features(fg, engineered_df, wait_for_job=True)
     logger.info(f"Successfully completed ingestion! {len(engineered_df)} feature rows stored in Hopsworks.")
     return engineered_df

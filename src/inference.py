@@ -25,7 +25,7 @@ CANDIDATE_MODELS = {
     "lstm": (None, LSTMAQIModel, "pt"),
 }
 
-LOOKBACK_DAYS = 7
+LOOKBACK_DAYS = 16
 
 
 def get_hopsworks_registry() -> HopsworksModelRegistry:

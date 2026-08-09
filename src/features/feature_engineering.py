@@ -41,10 +41,10 @@ class AQIFeatureEngineer(BaseEstimator, TransformerMixin):
         df['wind_v'] = -df['wind_speed_10m'] * np.cos(np.radians(df['wind_direction_10m']))
 
         # 3. Pollutant interaction features
-        df["pm_ratio"] = df["pm2_5"] / (df["pm10"] + 1e-6)          # pm10 never near 0 — safe as-is
+        df["pm_ratio"] = df["pm2_5"] / (df["pm10"] + 1e-6)        
         df["no2_o3_ratio"] = df["nitrogen_dioxide"] / df["ozone"].clip(lower=5.0)
 
-        # Continuous transition signals — must be per-city so cities don't bleed into each other
+        # Continuous transition signals
         df['temp_trend_7d'] = df.groupby("city")["temperature_2m"].transform(
             lambda s: s.rolling(24 * 7).mean().diff(24 * 7)
         )
