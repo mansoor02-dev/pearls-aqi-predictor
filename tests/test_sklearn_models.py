@@ -17,6 +17,7 @@ import pytest
 from src.models.sklearn_models import SklearnAQIModel
 
 
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 MODEL_TYPES = ["linear", "random_forest", "xgboost"]
@@ -99,16 +100,20 @@ class TestTrain:
 
 class TestPredict:
 
-    @pytest.fixture(scope="class")
-    def trained(self):
-        df = _engineered_df()
-        model = SklearnAQIModel("aqi_rf_h1", "random_forest", forecast_horizon=1)
-        X, y = model.preprocess(df, target_day=1)
-        model.train(X, y)
-        return model, X
+    @pytest.fixture
+    def sklearn_model():
+        return SklearnAQIModel("aqi_random_forest_h1", "random_forest", forecast_horizon=1)
 
-    def test_predict_returns_array(self, trained):
-        model, X = trained
+    @pytest.fixture
+    def trained_sklearn_model(engineered_df):
+        model = SklearnAQIModel("aqi_random_forest_h1", "random_forest", forecast_horizon=1)
+        data = model.preprocess(engineered_df, horizon=1)
+        model.train(data["X_train"], data["y_train_delta"])
+        return model
+
+    def test_predict_returns_array(self, trained_sklearn_model):
+        model = trained_sklearn_model
+        X = model.X_train
         current_aqi = 80.0
         preds = model.predict(X, current_aqi)
         assert len(preds) == len(X)
