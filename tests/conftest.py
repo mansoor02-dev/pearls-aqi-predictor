@@ -79,21 +79,18 @@ def engineered_df(large_raw_df):
     fe = AQIFeatureEngineer(forecast_horizon=3)
     return fe.fit_transform(large_raw_df)
 
-
 @pytest.fixture
 def sklearn_model():
     """A freshly initialised (untrained) Random Forest SklearnAQIModel."""
     from src.models.sklearn_models import SklearnAQIModel
-    return SklearnAQIModel(name="aqi_random_forest_h1",
-                           model_type="random_forest", forecast_horizon=1)
+    return SklearnAQIModel("aqi_random_forest_h1", "random_forest", forecast_horizon=1)
 
 
 @pytest.fixture
 def trained_sklearn_model(engineered_df):
     """A trained Random Forest model, ready for predict/evaluate calls."""
     from src.models.sklearn_models import SklearnAQIModel
-    model = SklearnAQIModel(name="aqi_random_forest_h1",
-                            model_type="random_forest", forecast_horizon=1)
-    X, y = model.preprocess(engineered_df, target_day=1)
-    model.train(X, y)
+    model = SklearnAQIModel("aqi_random_forest_h1", "random_forest", forecast_horizon=1)
+    data = model.preprocess(engineered_df, horizon=1)
+    model.train(data["X_train"], data["y_train_delta"])
     return model

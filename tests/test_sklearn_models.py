@@ -1,4 +1,3 @@
-# tests/test_sklearn_models.py
 """
 Unit tests for src/models/sklearn_models.py — SklearnAQIModel.
 
@@ -17,14 +16,10 @@ import pytest
 from src.models.sklearn_models import SklearnAQIModel
 
 
-
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 MODEL_TYPES = ["linear", "random_forest", "xgboost"]
 
 
 def _engineered_df(n: int = 200) -> pd.DataFrame:
-    """Small engineered DataFrame via conftest helper."""
     from tests.conftest import _make_engineered_df
     return _make_engineered_df(n=n, horizon=3)
 
@@ -37,37 +32,45 @@ class TestPreprocess:
     def data(self):
         df = _engineered_df()
         model = SklearnAQIModel("aqi_rf_h1", "random_forest", forecast_horizon=1)
-        return model, model.preprocess(df, target_day=1)
+        return model, model.preprocess(df, horizon=1)
 
-    def test_returns_x_and_y(self, data):
-        _, (X, y) = data
-        assert X is not None and y is not None
+    def test_returns_dict_with_expected_keys(self, data):
+        _, d = data
+        for key in ["X_train", "X_test", "y_train_delta", "y_test_delta",
+                    "y_train_raw", "y_test_raw", "current_aqi_train", "current_aqi_test"]:
+            assert key in d, f"Missing key '{key}' in preprocess() output"
 
-    def test_x_is_dataframe(self, data):
-        _, (X, y) = data
-        assert isinstance(X, pd.DataFrame)
+    def test_x_train_is_dataframe(self, data):
+        _, d = data
+        assert isinstance(d["X_train"], pd.DataFrame)
 
-    def test_y_is_series_or_array(self, data):
-        _, (X, y) = data
-        assert hasattr(y, "__len__")
+    def test_y_train_delta_has_length(self, data):
+        _, d = data
+        assert hasattr(d["y_train_delta"], "__len__")
 
     def test_no_target_column_in_x(self, data):
-        _, (X, y) = data
-        for col in X.columns:
+        _, d = data
+        for col in d["X_train"].columns:
             assert not col.startswith("aqi_next_"), \
                 f"Target column '{col}' leaked into features"
 
     def test_x_y_same_length(self, data):
-        _, (X, y) = data
-        assert len(X) == len(y)
+        _, d = data
+        assert len(d["X_train"]) == len(d["y_train_delta"])
+        assert len(d["X_test"]) == len(d["y_test_delta"])
 
-    def test_y_is_delta_not_raw_aqi(self, data):
-        """y must be the change (delta), not raw future AQI — roughly centred near 0."""
-        _, (X, y) = data
-        y_arr = np.array(y)
-        # Delta values should have much smaller magnitude than raw AQI (40-220)
+    def test_y_delta_is_delta_not_raw_aqi(self, data):
+        """y_train_delta must be the change (delta), not raw future AQI —
+        roughly centred near 0, much smaller magnitude than raw AQI (40-220)."""
+        _, d = data
+        y_arr = np.array(d["y_train_delta"])
         assert np.abs(y_arr).mean() < 100, \
-            "y looks like raw AQI, not a delta — preprocess may be returning wrong target"
+            "y_train_delta looks like raw AQI, not a delta"
+
+    def test_feature_names_set_after_preprocess(self, data):
+        model, _ = data
+        assert model.feature_names_ is not None
+        assert len(model.feature_names_) > 0
 
 
 # ── train ─────────────────────────────────────────────────────────────────────
@@ -78,21 +81,22 @@ class TestTrain:
     def test_train_does_not_crash(self, model_type):
         df = _engineered_df()
         model = SklearnAQIModel(f"aqi_{model_type}_h1", model_type, forecast_horizon=1)
-        X, y = model.preprocess(df, target_day=1)
-        model.train(X, y)   # must not raise
+        data = model.preprocess(df, horizon=1)
+        model.train(data["X_train"], data["y_train_delta"])
         assert model.model is not None
+        assert model.is_trained
 
     @pytest.mark.parametrize("model_type", MODEL_TYPES)
     def test_feature_names_set_after_train(self, model_type):
         df = _engineered_df()
         model = SklearnAQIModel(f"aqi_{model_type}_h1", model_type, forecast_horizon=1)
-        X, y = model.preprocess(df, target_day=1)
-        model.train(X, y)
+        data = model.preprocess(df, horizon=1)
+        model.train(data["X_train"], data["y_train_delta"])
         assert model.feature_names_ is not None
         assert len(model.feature_names_) > 0
 
     def test_raises_on_unsupported_model_type(self):
-        with pytest.raises((ValueError, KeyError)):
+        with pytest.raises(ValueError):
             SklearnAQIModel("bad", "neural_net_v99", forecast_horizon=1)
 
 
@@ -100,38 +104,29 @@ class TestTrain:
 
 class TestPredict:
 
-    @pytest.fixture
-    def sklearn_model():
-        return SklearnAQIModel("aqi_random_forest_h1", "random_forest", forecast_horizon=1)
-
-    @pytest.fixture
-    def trained_sklearn_model(engineered_df):
-        model = SklearnAQIModel("aqi_random_forest_h1", "random_forest", forecast_horizon=1)
-        data = model.preprocess(engineered_df, horizon=1)
+    @pytest.fixture(scope="class")
+    def trained(self):
+        df = _engineered_df()
+        model = SklearnAQIModel("aqi_rf_h1", "random_forest", forecast_horizon=1)
+        data = model.preprocess(df, horizon=1)
         model.train(data["X_train"], data["y_train_delta"])
-        return model
+        return model, data
 
-    def test_predict_returns_array(self, trained_sklearn_model):
-        model = trained_sklearn_model
-        X = model.X_train
-        current_aqi = 80.0
-        preds = model.predict(X, current_aqi)
-        assert len(preds) == len(X)
+    def test_predict_returns_array(self, trained):
+        model, data = trained
+        preds = model.predict(data["X_test"], data["current_aqi_test"])
+        assert len(preds) == len(data["X_test"])
 
     def test_predictions_are_floats(self, trained):
-        model, X = trained
-        preds = model.predict(X, current_aqi=80.0)
+        model, data = trained
+        preds = model.predict(data["X_test"], data["current_aqi_test"])
         assert all(isinstance(float(p), float) for p in preds)
 
     def test_predict_adds_current_aqi_back(self, trained):
-        """
-        The model predicts delta. predict() must add current_aqi back.
-        So the result should NOT be a near-zero delta — it should be
-        roughly in the range of AQI values (20-300).
-        """
-        model, X = trained
-        # Use a single row for clarity
-        preds = model.predict(X.iloc[[0]], current_aqi=100.0)
+        """The model predicts delta. predict() must add current_aqi back, so
+        the result should be in the plausible AQI range, not a near-zero delta."""
+        model, data = trained
+        preds = model.predict(data["X_test"].iloc[[0]], pd.Series([100.0]))
         pred_val = float(preds[0])
         assert 0 < pred_val < 600, \
             f"Prediction {pred_val} outside plausible AQI range — delta may not have been added back"
@@ -145,9 +140,9 @@ class TestEvaluate:
     def metrics(self):
         df = _engineered_df()
         model = SklearnAQIModel("aqi_rf_h1", "random_forest", forecast_horizon=1)
-        X, y = model.preprocess(df, target_day=1)
-        model.train(X, y)
-        return model.evaluate(X, y, current_aqi=80.0)
+        data = model.preprocess(df, horizon=1)
+        model.train(data["X_train"], data["y_train_delta"])
+        return model.evaluate(data["X_test"], data["y_test_raw"], data["current_aqi_test"])
 
     def test_returns_dict(self, metrics):
         assert isinstance(metrics, dict)
@@ -167,6 +162,17 @@ class TestEvaluate:
     def test_r2_is_at_most_one(self, metrics):
         assert metrics["r2"] <= 1.0
 
+    def test_skill_vs_naive_present_when_y_naive_given(self):
+        df = _engineered_df()
+        model = SklearnAQIModel("aqi_rf_h1", "random_forest", forecast_horizon=1)
+        data = model.preprocess(df, horizon=1)
+        model.train(data["X_train"], data["y_train_delta"])
+        metrics = model.evaluate(
+            data["X_test"], data["y_test_raw"], data["current_aqi_test"],
+            y_naive=data["current_aqi_test"],
+        )
+        assert metrics["skill_vs_naive"] is not None
+
 
 # ── save / load round-trip ────────────────────────────────────────────────────
 
@@ -175,26 +181,24 @@ class TestSaveLoad:
     def test_save_and_load_random_forest(self, tmp_path):
         df = _engineered_df()
         model = SklearnAQIModel("aqi_rf_h1", "random_forest", forecast_horizon=1)
-        X, y = model.preprocess(df, target_day=1)
-        model.train(X, y)
+        data = model.preprocess(df, horizon=1)
+        model.train(data["X_train"], data["y_train_delta"])
 
         path = str(tmp_path / "rf_h1.joblib")
         model.save(path)
 
-        # Load into a new instance
         loaded = SklearnAQIModel("aqi_rf_h1", "random_forest", forecast_horizon=1)
         loaded.load(path)
 
-        # Predictions from original and loaded must match
-        preds_orig   = model.predict(X.iloc[:5], current_aqi=80.0)
-        preds_loaded = loaded.predict(X.iloc[:5], current_aqi=80.0)
+        preds_orig = model.predict(data["X_test"].iloc[:5], data["current_aqi_test"].iloc[:5])
+        preds_loaded = loaded.predict(data["X_test"].iloc[:5], data["current_aqi_test"].iloc[:5])
         np.testing.assert_allclose(preds_orig, preds_loaded, rtol=1e-6)
 
     def test_feature_names_survive_round_trip(self, tmp_path):
         df = _engineered_df()
         model = SklearnAQIModel("aqi_rf_h1", "random_forest", forecast_horizon=1)
-        X, y = model.preprocess(df, target_day=1)
-        model.train(X, y)
+        data = model.preprocess(df, horizon=1)
+        model.train(data["X_train"], data["y_train_delta"])
         original_names = list(model.feature_names_)
 
         path = str(tmp_path / "rf_h1.joblib")
