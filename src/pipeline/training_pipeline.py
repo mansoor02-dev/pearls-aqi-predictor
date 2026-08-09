@@ -1,7 +1,6 @@
 import os
 from typing import Dict, Any
 
-import hopsworks
 import matplotlib.pyplot as plt
 import torch
 
