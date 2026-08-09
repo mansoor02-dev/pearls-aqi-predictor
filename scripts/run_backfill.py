@@ -55,10 +55,10 @@ def backfill_historical_data(start_date: str, end_date: str):
     engineered_df = validator.validate_features(engineered_df)
 
     project = hopsworks.login(
-    api_key_value=settings.HOPSWORKS_API_KEY,
-    project=settings.HOPSWORKS_PROJECT_NAME,
-    host=settings.HOPSWORKS_HOST,
-)
+        api_key_value=settings.HOPSWORKS_API_KEY,
+        project=settings.HOPSWORKS_PROJECT_NAME,
+        host=settings.HOPSWORKS_HOST,
+    )
     fs = HopsworksFeatureStore(project)
     
     fg = fs.create_or_get_feature_group(
