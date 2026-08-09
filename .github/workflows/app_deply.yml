@@ -1,0 +1,33 @@
+name: Deploy App
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-app:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install dependencies
+        run: uv sync --no-dev
+
+      - name: Validate API startup
+        env:
+          HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
+        run: |
+          uv run uvicorn app.api:app --host 0.0.0.0 --port 8000 &
+          sleep 5
+          curl --fail http://localhost:8000/health
+          kill %1

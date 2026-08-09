@@ -44,9 +44,13 @@ class AQIFeatureEngineer(BaseEstimator, TransformerMixin):
         df["pm_ratio"] = df["pm2_5"] / (df["pm10"] + 1e-6)          # pm10 never near 0 — safe as-is
         df["no2_o3_ratio"] = df["nitrogen_dioxide"] / df["ozone"].clip(lower=5.0)
 
-        # Continuous transition signals
-        df['temp_trend_7d'] = df['temperature_2m'].rolling(24*7).mean().diff(24*7)  # is it warming/cooling fast?
-        df['rain_accum_7d'] = df['rain'].rolling(24*7).sum()   # monsoon "arriving" shows up here
+        # Continuous transition signals — must be per-city so cities don't bleed into each other
+        df['temp_trend_7d'] = df.groupby("city")["temperature_2m"].transform(
+            lambda s: s.rolling(24 * 7).mean().diff(24 * 7)
+        )
+        df['rain_accum_7d'] = df.groupby("city")["rain"].transform(
+            lambda s: s.rolling(24 * 7).sum()
+        )
 
         g = df.groupby("city")["european_aqi"]
 
@@ -60,12 +64,18 @@ class AQIFeatureEngineer(BaseEstimator, TransformerMixin):
             df[f"aqi_roll_mean_{window}h"] = shifted.groupby(df["city"]).rolling(window).mean().reset_index(level=0, drop=True)
             df[f"aqi_roll_std_{window}h"] = shifted.groupby(df["city"]).rolling(window).std().reset_index(level=0, drop=True)
 
-        # 6. Exponential rolling statistic — weights recent hours more than a flat window average
-        df["aqi_ewm_6h"] = df["european_aqi"].ewm(span=6).mean()
+        # 6. Exponential rolling statistic — per city so cities don't bleed into each other
+        df["aqi_ewm_6h"] = df.groupby("city")["european_aqi"].transform(
+            lambda s: s.ewm(span=6).mean()
+        )
 
-        # 7. Rate of change
-        df["aqi_change_1h"] = g.shift(1).diff(1)
-        df["aqi_change_24h"] = g.shift(1).diff(24)
+        # 7. Rate of change — diff must stay within each city group
+        df["aqi_change_1h"] = df.groupby("city")["european_aqi"].transform(
+            lambda s: s.shift(1).diff(1)
+        )
+        df["aqi_change_24h"] = df.groupby("city")["european_aqi"].transform(
+            lambda s: s.shift(1).diff(24)
+        )
 
         # 8. Target creation — one column per day out to forecast_horizon
         for day in range(1, self.forecast_horizon + 1):

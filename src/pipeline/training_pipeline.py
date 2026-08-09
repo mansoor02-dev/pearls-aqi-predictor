@@ -7,8 +7,8 @@ import torch
 
 from src.features.feature_store import HopsworksFeatureStore
 from src.models.model_registry import HopsworksModelRegistry
-from models.sklearn_models import SklearnAQIModel
-from models.deep_learning import LSTMAQIModel, FeedForwardAQIModel
+from src.models.sklearn_models import SklearnAQIModel
+from src.models.deep_learning import LSTMAQIModel, FeedForwardAQIModel
 from src.utils.logger import setup_logger
 from config.settings import settings
 
@@ -34,7 +34,11 @@ class TrainingPipeline:
     """
 
     def __init__(self, horizons=(1, 2, 3)):
-        project = hopsworks.login() 
+        project = hopsworks.login(
+            api_key_value=settings.HOPSWORKS_API_KEY,
+            project=settings.HOPSWORKS_PROJECT_NAME,
+            host=settings.HOPSWORKS_HOST,
+        )
         self.fs = HopsworksFeatureStore(project)
         self.mr = HopsworksModelRegistry(project)
         self.horizons = list(horizons)

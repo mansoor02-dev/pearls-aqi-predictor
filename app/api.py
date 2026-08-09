@@ -14,8 +14,8 @@ from src.data.api_client import APIClientFactory
 from src.data.data_validator import DataValidator
 from src.features.feature_engineering import AQIFeatureEngineer
 from src.models.model_registry import HopsworksModelRegistry
-from models.sklearn_models import SklearnAQIModel
-from models.deep_learning import FeedForwardAQIModel, LSTMAQIModel
+from src.models.sklearn_models import SklearnAQIModel
+from src.models.deep_learning import FeedForwardAQIModel, LSTMAQIModel
 from src.utils.logger import setup_logger
 
 logger = setup_logger(__name__)
