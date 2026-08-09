@@ -1,14 +1,3 @@
-"""
-app/dashboard.py — Pearls AQI Predictor · Streamlit Dashboard
-
-Layout
-──────
-Sidebar  : refresh controls, model info, alerts
-Main     : current AQI gauge + pollutant cards
-           │── 7-day historical trend
-           │── 3-day forecast with confidence bands
-           └── SHAP feature-importance chart (if saved)
-"""
 import os
 from datetime import datetime, timedelta
 
@@ -502,7 +491,7 @@ def main():
     st.caption(
         "Data: [Open-Meteo](https://open-meteo.com) · "
         "Models: Hopsworks Model Registry · "
-        "Built with ❤️ using Streamlit + Plotly"
+        "Built using Streamlit + Plotly"
     )
 
 
