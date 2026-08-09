@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 from typing import Dict, Any
 
 import matplotlib.pyplot as plt
@@ -43,10 +44,14 @@ class TrainingPipeline:
 
 
     def run(self) -> Dict[int, Dict[str, Any]]:
-        training_data = self.fs.get_training_data(settings.FEATURE_VIEW_NAME,
-                            start_date="2022-01-01", end_date="2026-07-31")
+        training_data = self.fs.get_training_data(
+            settings.FEATURE_VIEW_NAME,
+            start_date=settings.BACKFILL_START_DATE,
+            end_date=datetime.now().strftime("%Y-%m-%d"),
+        )
 
         all_results: Dict[int, Dict[str, Any]] = {}
+        registered_versions: Dict[str, int] = {}
 
         for horizon in self.horizons:
             self.logger.info(f"Training horizon: {horizon}d")
@@ -78,11 +83,12 @@ class TrainingPipeline:
                     save_path = self._save_path(model_name, model)
                     os.makedirs(os.path.dirname(save_path), exist_ok=True)
                     model.save(save_path)
-                    self.mr.register_model(
+                    registered = self.mr.register_model(
                         model_name=f"aqi_{model_name}",
                         model_path=save_path,
                         metrics={k: v for k, v in metrics.items() if isinstance(v, (int, float))},
                     )
+                    registered_versions[name] = registered.version
                 except Exception as e:
                     self.logger.error(f"Training failed for '{name}' (h={horizon}): {e}", exc_info=True)
                     continue   # one model failing shouldn't lose the rest
