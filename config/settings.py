@@ -22,11 +22,10 @@ class Settings(BaseSettings):
 
     # Data
     CITY: str = "Lahore"
-    RAW_DATA_PATH: Path = Path("data/raw")
-    PROCESSED_DATA_PATH: Path = Path("data/processed")
+    BACKFILL_START_DATE: str = "2023-01-01"
 
     # Training
-    FORECAST_HORIZON: int = 3  # Days ahead
+    FORECAST_HORIZON: int = 3
     RANDOM_STATE: int = 42
 
     # Alerts — all optional; system logs to file even when none are configured
@@ -39,8 +38,8 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
 
     # Monitoring
-    DRIFT_THRESHOLD: float = 0.3   # share of drifted features that triggers an alert
-    AQI_ALERT_THRESHOLD: int = 150  # AQI level considered Unhealthy
+    DRIFT_THRESHOLD: float = 0.3
+    AQI_ALERT_THRESHOLD: int = 300  
 
 
 settings: Settings = Settings()
