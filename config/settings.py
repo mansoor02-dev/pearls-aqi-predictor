@@ -4,9 +4,6 @@ from pathlib import Path
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
     
-    # API Keys (loaded from .env, never hardcoded)
-    OPENWEATHER_API_KEY: str  # API For Backup 
-    
     # Hopsworks
     HOPSWORKS_API_KEY: str
     HOPSWORKS_PROJECT_NAME: str = "pearl_aqi_feature_store"

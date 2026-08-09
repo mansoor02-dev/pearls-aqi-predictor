@@ -1,4 +1,14 @@
-from datetime import datetime
+import sys
+from pathlib import Path
+
+# 1. Resolve project root path
+PROJECT_ROOT = Path(__file__).resolve().parents[1]  # Use parents[1] if scripts/ is directly under project root
+CONFIG_PATH = PROJECT_ROOT / "config"
+
+# 2. Add PROJECT_ROOT to Python path BEFORE importing local modules
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import pandas as pd
 import hopsworks
 
@@ -8,6 +18,7 @@ from src.data.api_client import APIClientFactory
 from src.data.data_validator import DataValidator
 from src.features.feature_engineering import AQIFeatureEngineer
 from src.features.feature_store import HopsworksFeatureStore
+
 
 logger = setup_logger("BackfillScript")
 
@@ -64,4 +75,4 @@ def backfill_historical_data(start_date: str, end_date: str):
     return training_data
 
 if __name__ == "__main__":
-    backfill_historical_data(start_date="2022-01-01", end_date="2026-07-31")
+    backfill_historical_data(start_date="2023-01-01", end_date="2026-07-31")

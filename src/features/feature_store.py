@@ -24,22 +24,28 @@ class HopsworksFeatureStore:
 
     def create_or_get_feature_group(self, name: str, version: int, primary_key: list, event_time: str):
         """Get the feature group at this EXACT version, or create it if it
-        doesn't exist yet. `version` is always explicit"""
+        doesn't exist yet. Different hopsworks SDK versions handle "not found"
+        differently — some raise RestAPIError, some just return None. Handle
+        both rather than assume one."""
         try:
             fg = self.fs.get_feature_group(name=name, version=version)
+        except RestAPIError:
+            fg = None
+
+        if fg is not None:
             self.logger.info(f"Found existing feature group: {name}_v{version}")
             return fg
-        except RestAPIError:
-            fg = self.fs.create_feature_group(
-                name=name,
-                version=version,
-                description="AQI and weather features for forecasting",
-                primary_key=primary_key,
-                event_time=event_time,
-                online_enabled=True,
-            )
-            self.logger.info(f"Created feature group: {name}_v{version}")
-            return fg
+
+        fg = self.fs.create_feature_group(
+            name=name,
+            version=version,
+            description="AQI and weather features for forecasting",
+            primary_key=primary_key,
+            event_time=event_time,
+            online_enabled=True,
+        )
+        self.logger.info(f"Created feature group: {name}_v{version}")
+        return fg
 
     def list_feature_group_versions(self, name: str) -> list:
         versions = [fg.version for fg in self.fs.get_feature_groups(name)]
@@ -59,10 +65,18 @@ class HopsworksFeatureStore:
         return fg
 
     def insert_features(self, feature_group, df: pd.DataFrame):
+        df = df.copy()    
+        df["date"] = pd.to_datetime(df["date"])
+        
+        if df["date"].dt.tz is not None:
+            df["date"] = df["date"].dt.tz_convert("UTC").dt.tz_localize(None)
+        
+        df["date"] = df["date"].astype("datetime64[us]") 
+        
         feature_group.insert(df, write_options={"wait_for_job": True})
         self.logger.info(f"Inserted {len(df)} rows into feature group")
 
-    def get_training_data(self, feature_view_name: str, start_date: str = None, end_date: str = None):
+    def get_training_data(self, feature_view_name: str, start_date: str = None, end_date: str = None):    
         """Creates a feature view, materializes a versioned
         training dataset for the given time range, and returns it as a
         DataFrame + labels. Each call with a distinct date range creates its
@@ -73,8 +87,12 @@ class HopsworksFeatureStore:
 
         try:
             fv = self.fs.get_feature_view(name=feature_view_name, version=settings.FEATURE_VIEW_VERSION)
-            self.logger.info(f"Found existing feature view: {feature_view_name}_v{settings.FEATURE_VIEW_VERSION}")
         except RestAPIError:
+            fv = None
+
+        if fv is not None:
+            self.logger.info(f"Found existing feature view: {feature_view_name}_v{settings.FEATURE_VIEW_VERSION}")
+        else:
             fv = self.fs.create_feature_view(
                 name=feature_view_name,
                 version=settings.FEATURE_VIEW_VERSION,
