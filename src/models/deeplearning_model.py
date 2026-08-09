@@ -28,12 +28,12 @@ def _prepare_flat_split(df: pd.DataFrame, horizon: int, test_frac: float):
                           f"with forecast_horizon >= {horizon}?")
 
     d = df.dropna(subset=[target_col]).copy()
+    other_horizon_cols = [c for c in d.columns if c.startswith("aqi_next_") and c != target_col]
+    d = d.drop(columns=other_horizon_cols)
     d = d.dropna()
     d["target_delta"] = d[target_col] - d["european_aqi"]
-
-    other_horizon_cols = [c for c in d.columns if c.startswith("aqi_next_") and c != target_col]
-    drop_cols = BASE_DROP_COLS + [target_col, "target_delta"] + other_horizon_cols
-
+    drop_cols = BASE_DROP_COLS + [target_col, "target_delta"]
+    
     X = d.drop(columns=drop_cols)
     y_delta = d["target_delta"].to_numpy()
     y_raw = d[target_col].to_numpy()
@@ -59,6 +59,13 @@ def _window_end_indices(n: int, sequence_length: int) -> np.ndarray:
     must be read from this same index, not one step past the window."""
     return np.arange(sequence_length - 1, n)
 
+def _scale_3d(scaler, arr_3d: np.ndarray, fit: bool) -> np.ndarray:
+    """RobustScaler/StandardScaler only operate on 2D. Flatten (N, seq_len,
+    features) -> (N*seq_len, features), scale, reshape back."""
+    n, seq_len, n_features = arr_3d.shape
+    flat = arr_3d.reshape(-1, n_features)
+    flat = scaler.fit_transform(flat) if fit else scaler.transform(flat)
+    return flat.reshape(n, seq_len, n_features) 
 
 def _train_torch_model(model: nn.Module, train_loader: DataLoader, epochs: int = 150,
                         lr: float = 1e-3, patience: int = 10) -> list:
@@ -147,16 +154,15 @@ class FeedForwardAQIModel(BaseAQIModel):
         horizon = horizon or self.forecast_horizon
         split = _prepare_flat_split(df, horizon, test_frac)
         self.feature_names_ = split["feature_names"]
-
-        split["X_train"] = self.x_scaler.fit_transform(split["X_train"])
-        split["X_test"] = self.x_scaler.transform(split["X_test"])
-        split["y_train_delta"] = self.y_scaler.fit_transform(split["y_train_delta"].reshape(-1, 1)).ravel()
-        # y_test_delta intentionally left unscaled
         return split
 
     def train(self, X_train, y_train_delta, X_val=None, y_val_delta=None, epochs=150, lr=1e-3) -> Dict[str, float]:
+        
+        X_train = self.x_scaler.fit_transform(X_train)
+        y_train_delta = self.y_scaler.fit_transform(y_train_delta.reshape(-1, 1)).ravel()
+
         X_t = torch.tensor(X_train, dtype=torch.float32)
-        y_t = torch.tensor(y_train_delta, dtype=torch.float32).unsqueeze(1)   # (N,1) — matches model output shape
+        y_t = torch.tensor(y_train_delta, dtype=torch.float32).unsqueeze(1)
         loader = DataLoader(TensorDataset(X_t, y_t), batch_size=256, shuffle=True)
 
         self.model = _FeedForwardNet(input_size=X_train.shape[1])
@@ -165,13 +171,14 @@ class FeedForwardAQIModel(BaseAQIModel):
         return {"final_loss": self.loss_history_[-1]}
 
     def predict(self, X, current_aqi) -> np.ndarray:
+        X = self.x_scaler.transform(X)   # now self-contained — safe from anywhere
         self.model.eval()
         with torch.no_grad():
             pred_scaled = self.model(torch.tensor(X, dtype=torch.float32).to(DEVICE)).cpu().numpy().ravel()
         pred_delta = self.y_scaler.inverse_transform(pred_scaled.reshape(-1, 1)).ravel()
         current_aqi = current_aqi.values if hasattr(current_aqi, "values") else np.asarray(current_aqi)
         return current_aqi + pred_delta
-
+    
     def evaluate(self, X_test, y_test_raw, current_aqi_test, y_naive=None) -> Dict[str, float]:
         pred_raw = self.predict(X_test, current_aqi_test)
         self.metrics = _score(self.model_name, self.forecast_horizon, y_test_raw, pred_raw, y_naive)
@@ -229,25 +236,24 @@ class LSTMAQIModel(BaseAQIModel):
         flat = _prepare_flat_split(df, horizon, test_frac)
         self.feature_names_ = flat["feature_names"]
 
-        X_train_scaled = self.x_scaler.fit_transform(flat["X_train"])
-        X_test_scaled = self.x_scaler.transform(flat["X_test"])
-        y_train_delta_scaled = self.y_scaler.fit_transform(flat["y_train_delta"].reshape(-1, 1)).ravel()
+        X_train_seq = _make_windows(flat["X_train"], self.sequence_length)   # unscaled
+        X_test_seq = _make_windows(flat["X_test"], self.sequence_length)
 
-        X_train_seq = _make_windows(X_train_scaled, self.sequence_length)
-        X_test_seq = _make_windows(X_test_scaled, self.sequence_length)
-
-        train_end_idx = _window_end_indices(len(X_train_scaled), self.sequence_length)
-        test_end_idx = _window_end_indices(len(X_test_scaled), self.sequence_length)
+        train_end_idx = _window_end_indices(len(flat["X_train"]), self.sequence_length)
+        test_end_idx = _window_end_indices(len(flat["X_test"]), self.sequence_length)
 
         return {
             "X_train": X_train_seq, "X_test": X_test_seq,
-            "y_train_delta": y_train_delta_scaled[train_end_idx],
-            "y_test_delta": flat["y_train_delta"][train_end_idx] if False else flat["y_test_delta"][test_end_idx],
+            "y_train_delta": flat["y_train_delta"][train_end_idx],
+            "y_test_delta": flat["y_test_delta"][test_end_idx],
             "y_test_raw": flat["y_test_raw"][test_end_idx],
             "current_aqi_test": flat["current_aqi_test"][test_end_idx],
         }
 
     def train(self, X_train, y_train_delta, X_val=None, y_val_delta=None, epochs=100, lr=1e-3) -> Dict[str, float]:
+        X_train = _scale_3d(self.x_scaler, X_train, fit=True)
+        y_train_delta = self.y_scaler.fit_transform(y_train_delta.reshape(-1, 1)).ravel()
+
         X_t = torch.tensor(X_train, dtype=torch.float32)
         y_t = torch.tensor(y_train_delta, dtype=torch.float32).unsqueeze(1)
         loader = DataLoader(TensorDataset(X_t, y_t), batch_size=256, shuffle=True)
@@ -258,13 +264,13 @@ class LSTMAQIModel(BaseAQIModel):
         return {"final_loss": self.loss_history_[-1]}
 
     def predict(self, X, current_aqi) -> np.ndarray:
+        X = _scale_3d(self.x_scaler, X, fit=False)
         self.model.eval()
         with torch.no_grad():
             pred_scaled = self.model(torch.tensor(X, dtype=torch.float32).to(DEVICE)).cpu().numpy().ravel()
         pred_delta = self.y_scaler.inverse_transform(pred_scaled.reshape(-1, 1)).ravel()
         current_aqi = current_aqi.values if hasattr(current_aqi, "values") else np.asarray(current_aqi)
         return current_aqi + pred_delta
-
     def evaluate(self, X_test, y_test_raw, current_aqi_test, y_naive=None) -> Dict[str, float]:
         pred_raw = self.predict(X_test, current_aqi_test)
         self.metrics = _score(self.model_name, self.forecast_horizon, y_test_raw, pred_raw, y_naive)

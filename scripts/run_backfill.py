@@ -67,6 +67,11 @@ def backfill_historical_data(start_date: str, end_date: str):
         primary_key=["city", "date"],
         event_time="date",
     )
+
+    feature_cols = [c for c in engineered_df.columns if not c.startswith("aqi_next_")]
+    engineered_df = engineered_df.dropna(subset=feature_cols)
+    logger.info(f"Dropped rows with incomplete features — {len(engineered_df)} rows remain")
+
     fs.insert_features(fg, engineered_df)
 
     training_data = fs.get_training_data(

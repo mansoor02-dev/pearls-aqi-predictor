@@ -47,26 +47,25 @@ class SklearnAQIModel(BaseAQIModel):
             raise ValueError(f"'{target_col}' not found — was AQIFeatureEngineer built "
                               f"with forecast_horizon >= {horizon}?")
 
+        # after — drop the OTHER horizons before the blanket dropna, not after
         d = df.dropna(subset=[target_col]).copy()
-        d = d.dropna()
-        d["target_delta"] = d[target_col] - d["european_aqi"]
 
         other_horizon_cols = [c for c in d.columns if c.startswith("aqi_next_") and c != target_col]
-        drop_cols = BASE_DROP_COLS + [target_col, "target_delta"] + other_horizon_cols
+        d = d.drop(columns=other_horizon_cols)
+        d = d.dropna()
 
+        d["target_delta"] = d[target_col] - d["european_aqi"]
+        drop_cols = BASE_DROP_COLS + [target_col, "target_delta"]
+        
         X = d.drop(columns=drop_cols)
         y_delta = d["target_delta"]
         y_raw = d[target_col]
         current_aqi = d["european_aqi"]
 
         split_idx = int(len(X) * (1 - test_frac))
-        self.feature_names_ = X.columns.tolist()   # needed by get_feature_importance() below
-        X_train, X_test = X.iloc[:split_idx], X.iloc[split_idx:]
-        if self.model_type == 'linear':
-            X_train = self.scaler.fit_transform(X_train)
-            X_test = self.scaler.transform(X_test)
+        self.feature_names_ = X.columns.tolist()
         return {
-            "X_train": X_train, "X_test": X_test,
+            "X_train": X.iloc[:split_idx], "X_test": X.iloc[split_idx:],
             "y_train_delta": y_delta.iloc[:split_idx], "y_test_delta": y_delta.iloc[split_idx:],
             "y_train_raw": y_raw.iloc[:split_idx], "y_test_raw": y_raw.iloc[split_idx:],
             "current_aqi_train": current_aqi.iloc[:split_idx],
@@ -74,6 +73,12 @@ class SklearnAQIModel(BaseAQIModel):
         }
 
     def train(self, X_train, y_train_delta, X_val=None, y_val_delta=None) -> Dict[str, float]:
+        # Scaling for Ridge model only
+        if self.model_type == "linear":
+            X_train = self.scaler.fit_transform(X_train)
+            if X_val is not None:
+                X_val = self.scaler.transform(X_val)
+        
         if self.model_type == "xgboost" and X_val is not None:
             self.model.fit(X_train, y_train_delta, eval_set=[(X_val, y_val_delta)], verbose=False)
         else:
@@ -83,6 +88,9 @@ class SklearnAQIModel(BaseAQIModel):
 
     def predict(self, X, current_aqi) -> np.ndarray:
         """Returns RAW AQI predictions, not delta — current_aqi + predicted_delta."""
+        if self.model_type == "linear":
+            X = self.scaler.transform(X)
+        
         pred_delta = self.model.predict(X)
         return current_aqi.values + pred_delta if hasattr(current_aqi, "values") else current_aqi + pred_delta
 
