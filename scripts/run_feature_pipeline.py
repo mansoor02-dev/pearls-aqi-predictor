@@ -8,5 +8,10 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from src.pipeline.feature_pipeline import update_features
 
-if __name__ == "__main__":
+
+def main():
     update_features()
+
+
+if __name__ == "__main__":
+    main()

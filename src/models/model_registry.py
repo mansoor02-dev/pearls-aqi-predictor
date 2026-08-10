@@ -54,5 +54,6 @@ class HopsworksModelRegistry:
         """Returns the best model version based on RMSE.
         This ensures the dashboard always dynamically fetches the best performing model."""
         model = self.get_best_model(model_name, metric="rmse", direction="min")
-        self.logger.info(f"Loaded production model '{model_name}' v{model.version}")
+        if model is not None:
+            self.logger.info(f"Loaded production model '{model_name}' v{model.version}")
         return model

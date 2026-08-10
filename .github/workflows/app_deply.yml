@@ -28,6 +28,9 @@ jobs:
           HOPSWORKS_API_KEY: ${{ secrets.HOPSWORKS_API_KEY }}
         run: |
           uv run uvicorn app.api:app --host 0.0.0.0 --port 8000 &
-          sleep 5
-          curl --fail http://localhost:8000/health
-          kill %1
+            PID=$!
+            for i in $(seq 1 15); do
+              curl --fail http://localhost:8000/health && break
+              sleep 2
+            done
+            kill $PID
