@@ -55,8 +55,9 @@ def get_latest_features(city: str) -> pd.DataFrame:
     client = APIClientFactory.get_primary_client()
     validator = DataValidator()
 
-    end_date = datetime.now().strftime("%Y-%m-%d")
-    start_date = (datetime.now() - timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+    end_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=LOOKBACK_DAYS + 1)).strftime("%Y-%m-%d")
+
 
     merged_df = client.fetch_merged_historical(city, start_date, end_date)
     validated_df = validator.validate_raw_data(merged_df)

@@ -46,23 +46,13 @@ class HopsworksModelRegistry:
         return best
 
     def promote_to_production(self, model_name: str, version: int) -> None:
-        """Tag one specific version as 'production', un-tagging any previous
-        production version of the same model first so exactly one is live."""
-        current_prod = self.get_production_model(model_name)
-        if current_prod is not None and current_prod.version != version:
-            current_prod.delete_tag("stage")
-            self.logger.info(f"Un-tagged {model_name} v{current_prod.version} as production")
+        """In Hopsworks without a predefined tag schema, we simply rely on 
+        metrics to find the best model. This is kept for interface compatibility."""
+        self.logger.info(f"Model {model_name} v{version} is now available for production inference.")
 
-        model = self.mr.get_model(name=model_name, version=version)
-        model.set_tag("stage", "production")
-        self.logger.info(f"Promoted {model_name} v{version} to production")
-
-    def get_production_model(self, model_name: str) -> Optional[Any]:
-        """Returns the version currently tagged 'production', or None if
-        nothing has been promoted yet. This is what inference code (the API,
-        the dashboard) should call — never hardcode a version number there."""
-        for model in self.mr.get_models(name=model_name):
-            if model.get_tag("stage") == "production":
-                return model
-        self.logger.warning(f"No production model tagged for '{model_name}'")
-        return None
+    def get_production_model(self, model_name: str) -> Any:
+        """Returns the best model version based on RMSE.
+        This ensures the dashboard always dynamically fetches the best performing model."""
+        model = self.get_best_model(model_name, metric="rmse", direction="min")
+        self.logger.info(f"Loaded production model '{model_name}' v{model.version}")
+        return model

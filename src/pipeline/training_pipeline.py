@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any
 
 import matplotlib.pyplot as plt
@@ -44,10 +44,9 @@ class TrainingPipeline:
 
 
     def run(self) -> Dict[int, Dict[str, Any]]:
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
         training_data = self.fs.get_training_data(
-            settings.FEATURE_VIEW_NAME,
-            start_date=settings.BACKFILL_START_DATE,
-            end_date=datetime.now().strftime("%Y-%m-%d"),
+            settings.FEATURE_VIEW_NAME, start_date="2022-01-01", end_date=yesterday
         )
 
         all_results: Dict[int, Dict[str, Any]] = {}
@@ -104,7 +103,7 @@ class TrainingPipeline:
                 f"(skill_vs_naive={best_metrics['skill_vs_naive']:.3f}, rmse={best_metrics['rmse']:.2f})"
             )
 
-            self.mr.promote_to_production(f"aqi_{best_name}_h{horizon}", version=1)  # adjust version lookup if you keep multiple runs
+            self.mr.promote_to_production(f"aqi_{best_name}_h{horizon}", version=registered_versions[best_name])
 
             self._generate_shap_explanations(
                 trained_models[best_name], horizon_data[best_name]["X_test"], horizon=horizon, name=best_name,

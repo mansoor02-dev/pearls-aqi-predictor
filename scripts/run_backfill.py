@@ -1,6 +1,5 @@
 import sys
-from datetime import datetime
-from pathlib import Path
+from datetime import datetime, timedelta
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
@@ -11,5 +10,5 @@ from config.settings import settings
 
 
 if __name__ == "__main__":
-    end_date = datetime.now().strftime("%Y-%m-%d")
+    end_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
     backfill_historical_data(start_date=settings.BACKFILL_START_DATE, end_date=end_date)

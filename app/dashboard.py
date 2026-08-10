@@ -1,7 +1,12 @@
 import os
 from datetime import datetime, timedelta
+import sys
+from pathlib import Path
 
-import numpy as np
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -75,6 +80,11 @@ AQI_LEVELS = [
     (500, "Hazardous",               "#ff7b72", "#2d0000"),
 ]
 
+def hex_to_rgba(hex_str: str, alpha: float = 0.2) -> str:
+    """Converts a 6-character HEX string to a Plotly-compatible rgba string."""
+    hex_str = hex_str.lstrip("#")
+    r, g, b = tuple(int(hex_str[i : i + 2], 16) for i in (0, 2, 4))
+    return f"rgba({r}, {g}, {b}, {alpha})"
 
 def _aqi_meta(aqi: float):
     """Return (label, color, bg) for a given AQI value."""
@@ -91,34 +101,49 @@ def _gauge(value: float, title: str = "Current AQI") -> go.Figure:
     palette = [c for _, _, c, _ in AQI_LEVELS]
     ceilings = [c for c, *_ in AQI_LEVELS]
     for ceiling, clr in zip(ceilings, palette):
-        steps.append({"range": [prev, ceiling], "color": clr + "33"})
+        steps.append({"range": [prev, ceiling], "color": hex_to_rgba(clr, 0.2)})
         prev = ceiling
 
     fig = go.Figure(go.Indicator(
-        mode="gauge+number+delta",
+        mode="gauge+number",  # Removed "+delta" to clear the green '-' mark
         value=value,
-        title={"text": f"<b>{title}</b><br><span style='font-size:0.8em;color:{color}'>{label}</span>",
-               "font": {"size": 16, "color": "#e6edf3"}},
-        number={"font": {"size": 52, "color": color}, "suffix": ""},
+        domain={'x': [0, 1], 'y': [0, 0.75]},  # Pulls the gauge down from the title space
+        title={
+            "text": f"<b>{title}</b><br><span style='font-size:0.8em5;color:{color}'>{label}</span>",
+            "font": {"size": 16, "color": "#e6edf3"}
+        },
+        number={
+            "font": {"size": 46, "color": color}, 
+            "suffix": ""
+        },
         gauge={
-            "axis": {"range": [0, 300], "tickwidth": 1,
-                     "tickcolor": "#30363d", "tickfont": {"color": "#8b949e"}},
+            "axis": {
+                "range": [0, 300], 
+                "tickwidth": 1,
+                "tickcolor": "#30363d", 
+                "tickfont": {"color": "#8b949e"}
+            },
             "bar": {"color": color, "thickness": 0.25},
             "bgcolor": "#161b22",
             "borderwidth": 0,
             "steps": steps,
             "threshold": {
                 "line": {"color": "#e6edf3", "width": 2},
-                "thickness": 0.75, "value": value,
+                "thickness": 0.75, 
+                "value": value,
             },
         },
     ))
+    
     fig.update_layout(
-        height=260, margin={"t": 60, "b": 0, "l": 20, "r": 20},
-        paper_bgcolor="#0d1117", plot_bgcolor="#0d1117", font_color="#e6edf3",
+        height=260, 
+        margin={"t": 40, "b": 10, "l": 20, "r": 20},
+        paper_bgcolor="#0d1117", 
+        plot_bgcolor="#0d1117", 
+        font_color="#e6edf3",
     )
+    
     return fig
-
 
 def _forecast_chart(
     dates: list[str],
@@ -194,14 +219,15 @@ def _history_chart(df: pd.DataFrame) -> go.Figure:
         x=df["date"], y=df["european_aqi"],
         mode="lines",
         line={"color": "#58a6ff", "width": 2},
-        fill="tozeroy", fillcolor="rgba(88,166,255,0.08)",
+        fill="tozeroy", 
+        fillcolor=hex_to_rgba("#58a6ff", 0.15),
         name="AQI",
         hovertemplate="<b>%{y:.0f}</b><extra>%{x|%b %d %H:%M}</extra>",
     ))
     for lo, hi, clr, lbl in [(0, 50, "#3fb950", "Good"), (51, 100, "#d29922", "Moderate"),
                                (101, 150, "#e3812b", "USG"), (151, 200, "#f85149", "Unhealthy"),
                                (201, 300, "#bc8cff", "Very Unhealthy")]:
-        fig.add_hrect(y0=lo, y1=hi, fillcolor=clr + "18", line_width=0)
+        fig.add_hrect(y0=lo, y1=hi, fillcolor=hex_to_rgba(clr, 0.1), line_width=0)
 
     fig.update_layout(
         height=250, margin={"t": 10, "b": 30, "l": 10, "r": 10},
@@ -264,7 +290,7 @@ def main():
         st.caption(f"Updated: {datetime.now().strftime('%H:%M, %d %b %Y')}")
         st.divider()
 
-        if st.button("🔄  Refresh data", use_container_width=True):
+        if st.button("🔄  Refresh data", width="stretch"):
             st.cache_data.clear()
             st.rerun()
 
@@ -276,7 +302,7 @@ def main():
         st.markdown('<div class="section-header">AQI Guide</div>', unsafe_allow_html=True)
         for ceiling, lbl, clr, _ in AQI_LEVELS:
             st.markdown(
-                f'<span class="aqi-badge" style="background:{clr}22;color:{clr}">'
+                f'<span class="aqi-badge" style="background:{hex_to_rgba(clr, 0.15)}; color:{clr}">'
                 f'0–{ceiling}</span> &nbsp; {lbl}',
                 unsafe_allow_html=True,
             )
@@ -318,7 +344,7 @@ def main():
     col_gauge, col_polls = st.columns([1, 2])
 
     with col_gauge:
-        st.plotly_chart(_gauge(current_aqi), use_container_width=True)
+        st.plotly_chart(_gauge(current_aqi), width="stretch")
 
     with col_polls:
         st.markdown('<div class="section-header">Key Pollutants (current hour)</div>',
@@ -359,7 +385,7 @@ def main():
             raw_cols = ["date", "european_aqi"]
             hist_df = engineered_df[raw_cols].dropna().copy()
             hist_df["date"] = pd.to_datetime(hist_df["date"])
-            st.plotly_chart(_history_chart(hist_df), use_container_width=True)
+            st.plotly_chart(_history_chart(hist_df), width="stretch")
         except Exception as exc:
             st.warning(f"Historical data unavailable: {exc}")
             engineered_df = None
@@ -402,7 +428,7 @@ def main():
             display_vals = [v if v is not None else current_aqi for v in fc_values]
             st.plotly_chart(
                 _forecast_chart(day_labels, display_vals, ci_low, ci_high, current_aqi),
-                use_container_width=True,
+                width="stretch",
             )
 
             # Alert on bad forecast
@@ -430,7 +456,7 @@ def main():
         if models_info:
             st.dataframe(
                 pd.DataFrame(models_info),
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
         else:
@@ -461,7 +487,7 @@ def main():
                 shap_path = f"docs/shap_summary_h{day}_{mname}.png"
                 if os.path.exists(shap_path):
                     st.caption(f"Model: **{mname}** · Horizon: **{day}d**")
-                    st.image(shap_path, use_column_width=True)
+                    st.image(shap_path, width="stretch")
                     shap_found = True
                     break
             if shap_found:

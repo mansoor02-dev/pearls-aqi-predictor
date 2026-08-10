@@ -17,7 +17,8 @@ def update_features(lookback_days: int = LOOKBACK_DAYS):
     """
     Run hourly feature pipeline update for the past `lookback_days`.
     """
-    end_date = datetime.now().strftime("%Y-%m-%d")
-    start_date = (datetime.now() - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+    end_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=lookback_days + 1)).strftime("%Y-%m-%d")
+
     logger.info(f"Starting feature pipeline update: {start_date} to {end_date}")
     return backfill_historical_data(start_date=start_date, end_date=end_date)

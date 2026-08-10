@@ -88,14 +88,12 @@ def _load_production_model(mr: HopsworksModelRegistry, horizon: int):
 
 
 def _latest_features(client, validator, city: str) -> pd.DataFrame:
-    end_date = datetime.now().strftime("%Y-%m-%d")
-    start_date = (datetime.now() - timedelta(days=LOOKBACK_DAYS)).strftime("%Y-%m-%d")
+    end_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=LOOKBACK_DAYS + 1)).strftime("%Y-%m-%d")
 
-    aqi_df = pd.DataFrame(client.fetch_historical(city, start_date, end_date))
-    weather_df = pd.DataFrame(client.fetch_historical_weather(city, start_date, end_date))
-    merged_df = pd.merge(weather_df, aqi_df, on=["date", "city", "lat", "lon"])
-
+    merged_df = client.fetch_merged_historical(city, start_date, end_date)
     validated_df = validator.validate_raw_data(merged_df)
+
     engineered_df = AQIFeatureEngineer(forecast_horizon=settings.FORECAST_HORIZON).fit_transform(validated_df)
 
     return engineered_df
