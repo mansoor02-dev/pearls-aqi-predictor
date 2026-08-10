@@ -112,6 +112,7 @@ class SklearnAQIModel(BaseAQIModel):
 
     def save(self, path: str) -> None:
         joblib.dump({"model": self.model, "model_type": self.model_type,
+                     "scaler": self.scaler,
                      "forecast_horizon": self.forecast_horizon,
                      "feature_names_": getattr(self, "feature_names_", None)}, path)
         logger.info(f"Saved {self.model_name} to {path}")
@@ -120,6 +121,7 @@ class SklearnAQIModel(BaseAQIModel):
         state = joblib.load(path)
         self.model = state["model"]
         self.model_type = state["model_type"]
+        self.scaler = state.get("scaler", RobustScaler())
         self.forecast_horizon = state["forecast_horizon"]
         self.feature_names_ = state.get("feature_names_")
         self.is_trained = True
