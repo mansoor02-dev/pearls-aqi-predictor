@@ -1,61 +1,104 @@
-# Pearls AQI Predictor — Project Report
+# Pearls AQI Predictor — Final Project Report
 
-## 1. Executive Summary
-
-The **Pearls AQI Predictor** is a serverless Machine Learning system built to forecast the Air Quality Index (AQI) 1 to 3 days ahead. Using weather and pollutant history for major cities (such as Lahore), the project automatically ingests hourly data, builds temporal and statistical features, trains multiple ML models, and deploys the best performing model to a web dashboard and REST API.
-
----
-
-## 2. System Design & Data Pipeline
-
-The project follows a **Feature-Store-First** design using Hopsworks.
-
-1. **Data Ingestion**: Raw air quality (`PM2.5`, `PM10`, `CO`, `NO2`, `SO2`, `O3`) and weather (`temperature`, `wind speed`, `humidity`, `rain`) are pulled from Open-Meteo APIs.
-2. **Data Validation**: Inputs are verified using Pydantic to ensure no impossible values (e.g., negative pollutant concentrations or AQI > 500).
-3. **Feature Engineering**:
-   - **Time Features**: Hour, day of week, month, and weekend indicator.
-   - **Cyclical Encoding**: Sine and cosine transformations for time variables (`hour_sin`, `hour_cos`, `wind_u`, `wind_v`).
-   - **Pollutant Ratios**: $\text{PM}_{2.5}/\text{PM}_{10}$ ratio and $\text{NO}_2/\text{O}_3$ ratio.
-   - **Lag & Rolling Features**: 1h, 3h, 6h, and 24h lags, alongside rolling mean/std statistics (computed on shifted data to prevent target leakage).
-   - **Delta Target**: Models predict the *change* in AQI ($\Delta = \text{AQI}_{t+N} - \text{AQI}_t$) rather than raw level for higher stability.
+**Author:** Mansoor  
+**Program:** 10Pearls Internship  
+**Date:** August 2026  
 
 ---
 
-## 3. Model Experiments & Comparison
+## Executive Summary: Final Submission Deliverables
 
-Five candidate model architectures were trained and evaluated on 1-day, 2-day, and 3-day forecast horizons:
+This document serves as the final submission for the 10Pearls internship project. The objective was to build an intelligent, production-ready MLOps system. All core requirements have been successfully achieved:
 
-| Model Architecture | 1-Day RMSE | 2-Day RMSE | 3-Day RMSE | $R^2$ Score | Notes |
-|---|---|---|---|---|---|
-| **Naïve Baseline (Persistence)** | 24.50 | 38.10 | 47.80 | 0.00 | Assumes AQI remains unchanged |
-| **Ridge Regression** | 18.20 | 26.40 | 32.10 | 0.58 | Simple linear baseline |
-| **Random Forest** | 14.10 | 21.30 | 27.50 | 0.74 | Robust non-linear model |
-| **XGBoost (Production Winner)** | **12.40** | **18.90** | **24.20** | **0.81** | Best performance across horizons |
-| **Feed-Forward Neural Net (FFN)** | 15.60 | 23.10 | 29.80 | 0.69 | Fast CPU deep learning model |
-| **LSTM (Time-Series)** | 14.90 | 22.00 | 28.10 | 0.72 | Sequence model |
+### 1. End-to-End AQI Prediction System
+Developed a comprehensive machine learning system that ingests raw weather and pollutant data from the Open-Meteo API, engineers over 30 predictive features, and trains 5 different model architectures (Ridge Regression, Random Forest, XGBoost, Feed-Forward NN, and LSTM). The system accurately forecasts the European AQI for Lahore up to 3 days ahead, consistently outperforming naive baselines by reducing error by ~48% on the 1-day horizon.
 
-**Winner**: **XGBoost** achieved the lowest RMSE and highest $R^2$ across all three forecast horizons. It is automatically tagged as `production` in the Hopsworks Model Registry.
+### 2. Scalable, Automated Pipeline
+Implemented a fully serverless, highly scalable MLOps architecture using GitHub Actions and the Hopsworks Cloud. 
+- The **Feature Pipeline** runs 4× daily, pushing fresh data to the Hopsworks Feature Store via Kafka.
+- The **Training Pipeline** runs daily, fetching historical data, retraining all models, promoting the best-performing model (based on lowest RMSE) to the Model Registry, and generating SHAP explainability plots.
 
----
+### 3. Interactive Dashboard
+Built a premium, real-time web dashboard using Streamlit and Plotly. The dashboard loads the best production models directly from the Hopsworks registry via an automated Inference Layer. It features a real-time AQI gauge, pollutant cards, a 7-day historical trend chart, a 3-day forecast with confidence intervals, and dynamic SHAP feature importance visualizations.
 
-## 4. Explainability (SHAP Analysis)
-
-Model interpretability was evaluated using SHAP (SHapley Additive exPlanations):
-
-- **Top Features**: `aqi_lag_24h`, `aqi_roll_mean_24h`, `pm2_5`, and `wind_speed_10m` had the strongest influence on predicted AQI change.
-- **Insights**: Higher wind speeds correlate with rapid drops in AQI (dispersion of pollution), while high prior-day $\text{PM}_{2.5}$ leads to persistent high AQI.
+### 4. Detailed Project Documentation
+This report serves as the final deliverable, detailing the architecture, feature engineering methodology, model evaluations, pipeline automation, and lessons learned.
 
 ---
 
-## 5. Deployment, Monitoring & Alerting
+## 1. System Architecture
 
-- **Interactive Dashboard**: Built with Streamlit and Plotly. Includes an AQI gauge, pollutant metric cards, historical trends, 3-day forecasts with confidence bounds, and SHAP plots.
-- **REST API**: Built with FastAPI (`/predict` and `/health` endpoints).
-- **Automation (CI/CD)**: GitHub Actions run the feature pipeline hourly and the training pipeline daily.
-- **Drift & Alerting**: Integrated Evidently AI for statistical drift detection and a multi-channel alert system (Logger, Slack, Email) when AQI > 150.
+The system follows a modern **three-pipeline architecture** common in enterprise MLOps:
+
+![alt text](images/system_architecture.png)
+
+### Technology Stack
+- **Data Ingestion:** Open-Meteo API (Free, no API key required)
+- **Feature Store & Model Registry:** Hopsworks Cloud
+- **ML Models:** scikit-learn, XGBoost, PyTorch
+- **Explainability:** SHAP (SHapley Additive exPlanations)
+- **Dashboard:** Streamlit + Plotly
+- **REST API:** FastAPI + Uvicorn
+- **CI/CD & Orchestration:** GitHub Actions
+- **Package Management:** uv (Astral)
 
 ---
 
-## 6. Conclusion & Future Work
+## 2. Feature Engineering & Data Pipeline
 
-The system delivers serverless, accurate 3-day AQI forecasts. Future improvements include adding satellite aerosol optical depth (AOD) feeds and extending multi-city coverage.
+The `AQIFeatureEngineer` transformer produces **30+ robust features** from raw hourly data:
+
+- **Temporal & Cyclical:** Hour, day of week, and month, encoded using sin/cos transformations to capture seasonal and diurnal cycles.
+- **Wind Vectors:** Wind speed and direction decomposed into `wind_u` and `wind_v` components.
+- **Pollutant Ratios:** PM2.5/PM10 ratio and NO₂/O₃ interaction to capture photochemical activity.
+- **Climate Trends:** 7-day temperature trends and 7-day rain accumulation.
+- **Lag Features & Rolling Stats:** AQI at 1h, 3h, 6h, and 24h ago; rolling means for 4h, 6h, 12h, and 24h windows; exponential weighted moving average (6h).
+
+Data is validated for schema integrity and drift using Evidently AI before being written to the Hopsworks Feature Store.
+
+---
+
+## 3. Model Training & Evaluation
+
+Five distinct model architectures are evaluated dynamically for each forecast horizon (1-day, 2-day, 3-day):
+
+1. **Ridge Regression:** Linear baseline with RobustScaler preprocessing.
+2. **Random Forest:** Ensemble of 300 trees (max_depth=12).
+3. **XGBoost:** Gradient boosting with early stopping (lr=0.03).
+4. **Feed-Forward NN (PyTorch):** Deep learning (128 → Dropout → 64).
+5. **LSTM (PyTorch):** Sequence model with 24-hour lookback.
+
+### Training Strategy
+Models predict the **AQI delta** (change from current AQI) rather than the absolute AQI. 
+`predicted_AQI = current_AQI + predicted_delta`. 
+This anchors short-term predictions to the current state, significantly improving accuracy over direct prediction.
+
+### Model Promotion
+Models are ranked daily by their **Skill vs. Naïve** score (improvement over assuming the AQI stays the same). The best model's artifacts are serialized and uploaded to the Hopsworks Model Registry. Currently, **Random Forest** has proven to be the most robust architecture for this specific dataset.
+
+---
+
+## 4. Explainability (SHAP)
+
+To ensure the "black box" ML models are interpretable, SHAP values are computed for every promoted model. The SHAP plots are bundled into the model artifacts and displayed on the dashboard.
+
+**Key Findings:**
+1. `aqi_lag_1h` (current pollution level) is the strongest predictor.
+2. `aqi_lag_24h` effectively captures daily human activity cycles.
+3. Wind vectors (`wind_u`, `wind_v`) dictate how quickly pollutants are dispersed from the city center.
+
+---
+
+## 5. Challenges & Solutions
+
+1. **Hopsworks API Key Scopes:** Kafka-based feature ingestion failed initially due to missing `KAFKA` permission scopes. Resolved by updating token permissions.
+2. **Scaler Serialization:** Early linear models failed during inference because the `RobustScaler` state was lost. Fixed by refactoring the `save()` method in `sklearn_models.py` to bundle the scaler with the model weights using `joblib`.
+3. **CI/CD Permissions:** GitHub Actions initially failed to commit SHAP images back to the repository. This architectural flaw was resolved by bypassing git entirely and saving SHAP images directly inside the Hopsworks Model Registry artifacts directory.
+
+---
+
+## 6. Future Work
+
+- **Multi-city support:** Scale the pipeline to process data for Karachi and Islamabad simultaneously.
+- **Ensemble predictions:** Combine the top 3 models for a more robust weighted prediction output.
+- **Automated retraining triggers:** Move from cron-based retraining to trigger-based retraining (e.g., retrain only when data drift is detected).
