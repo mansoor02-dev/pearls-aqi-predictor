@@ -43,5 +43,3 @@ logs/
 .cache.sqlite
 
 *.pdf
-
-*.excalidraw
