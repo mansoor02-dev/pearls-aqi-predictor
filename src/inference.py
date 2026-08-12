@@ -46,9 +46,9 @@ def load_production_model(mr: HopsworksModelRegistry, horizon: int):
         instance.load(f"{model_dir}/{name}_h{horizon}.{ext}")
 
         rmse = (hw_model.training_metrics or {}).get("rmse") if hasattr(hw_model, "training_metrics") else None
-        return instance, name, hw_model.version, rmse
+        return instance, name, hw_model.version, rmse, model_dir
 
-    return None, None, None, None
+    return None, None, None, None, None
 
 
 def get_latest_features(city: str) -> pd.DataFrame:

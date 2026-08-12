@@ -79,12 +79,17 @@ class TrainingPipeline:
                     horizon_data[name] = data
                     trained_models[name] = model
 
-                    save_path = self._save_path(model_name, model)
-                    os.makedirs(os.path.dirname(save_path), exist_ok=True)
-                    model.save(save_path)
+                    save_dir = self._save_path(model_name, model)
+                    os.makedirs(save_dir, exist_ok=True)
+                    ext = "joblib" if model.model_type in ["linear", "random_forest", "xgboost"] else "pt"
+                    model_file = f"{save_dir}/{model_name}.{ext}"
+                    model.save(model_file)
+                    
+                    self._generate_shap_explanations(model, data["X_test"], save_dir)
+                    
                     registered = self.mr.register_model(
                         model_name=f"aqi_{model_name}",
-                        model_path=save_path,
+                        model_path=save_dir,
                         metrics={k: v for k, v in metrics.items() if isinstance(v, (int, float))},
                     )
                     registered_versions[name] = registered.version
@@ -105,20 +110,15 @@ class TrainingPipeline:
 
             self.mr.promote_to_production(f"aqi_{best_name}_h{horizon}", version=registered_versions[best_name])
 
-            self._generate_shap_explanations(
-                trained_models[best_name], horizon_data[best_name]["X_test"], horizon=horizon, name=best_name,
-            )
-
             all_results[horizon] = horizon_results
 
         return all_results
 
     @staticmethod
     def _save_path(model_name: str, model) -> str:
-        ext = "pt" if isinstance(model, (FeedForwardAQIModel, LSTMAQIModel)) else "joblib"
-        return f"models/aqi_models/{model_name}.{ext}"
+        return f"models/aqi_models/{model_name}"
 
-    def _generate_shap_explanations(self, model, X_test, horizon: int, name: str) -> None:
+    def _generate_shap_explanations(self, model, X_test, output_dir: str) -> None:
         """SHAP on the DELTA prediction (model.model, not model.predict) — the
         reconstruction step (+ current_aqi) is a constant shift per row and
         isn't informative to attribute; the delta model is what's actually
@@ -129,7 +129,6 @@ class TrainingPipeline:
             self.logger.warning("shap not installed — skipping explanation generation")
             return
 
-        os.makedirs("docs", exist_ok=True)
         sample = X_test[:200] if hasattr(X_test, "__len__") and len(X_test) > 200 else X_test
 
         if isinstance(model, LSTMAQIModel):
@@ -154,6 +153,6 @@ class TrainingPipeline:
         plt.figure()
         shap.summary_plot(shap_values, sample, feature_names=getattr(model, "feature_names_", None), show=False)
         plt.tight_layout()
-        plt.savefig(f"docs/shap_summary_h{horizon}_{name}.png")
+        plt.savefig(f"{output_dir}/shap_summary.png")
         plt.close()
-        self.logger.info(f"Saved SHAP summary for {name} (h={horizon}d)")
+        self.logger.info(f"Saved SHAP summary to {output_dir}")

@@ -400,7 +400,7 @@ def main():
         if engineered_df is not None:
             for day in range(1, horizon_choice + 1):
                 try:
-                    model, model_name, version, rmse = _load_model_cached(day)
+                    model, model_name, version, rmse, model_dir = _load_model_cached(day)
                     if model is None:
                         forecast_rows.append({"day": day, "aqi": None, "ci_low": None, "ci_high": None})
                         continue
@@ -483,20 +483,21 @@ def main():
                     unsafe_allow_html=True)
         shap_found = False
         for day in range(1, 4):
-            for mname in ["xgboost", "random_forest", "linear", "ffn"]:
-                shap_path = f"docs/shap_summary_h{day}_{mname}.png"
-                if os.path.exists(shap_path):
-                    st.caption(f"Model: **{mname}** · Horizon: **{day}d**")
-                    st.image(shap_path, width="stretch")
-                    shap_found = True
-                    break
-            if shap_found:
-                break
+            try:
+                _, mname, _, _, model_dir = _load_model_cached(day)
+                if model_dir:
+                    shap_path = os.path.join(model_dir, "shap_summary.png")
+                    if os.path.exists(shap_path):
+                        st.caption(f"Model: **{mname}** · Horizon: **{day}d**")
+                        st.image(shap_path, width="stretch")
+                        shap_found = True
+                        break
+            except Exception:
+                pass
 
         if not shap_found:
             st.info(
-                "SHAP explanations will appear here after the training pipeline runs.\n\n"
-                "They are saved to `docs/shap_summary_h{N}_{model}.png`.",
+                "SHAP explanations will appear here after the training pipeline runs and uploads them to Hopsworks.",
                 icon="ℹ️",
             )
             # Show a placeholder feature list instead
