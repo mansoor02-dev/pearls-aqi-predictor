@@ -20,43 +20,7 @@ Lahore consistently ranks among the world's most polluted cities. Accurate AQI f
 
 ## 🏗️ Architecture
 
-```text
-┌─────────────────────────────────────────────────────────────────┐
-│                     GitHub Actions (CI/CD)                       │
-│   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────┐ │
-│   │ Feature Pipeline │  │Training Pipeline │  │ Deploy App   │ │
-│   │  (4× daily)      │  │  (daily @ 2AM)   │  │  (on push)   │ │
-│   └───────┬──────────┘  └───────┬──────────┘  └──────────────┘ │
-└───────────┼─────────────────────┼──────────────────────────────┘
-            │                     │
-            ▼                     ▼
-┌───────────────────┐   ┌──────────────────────┐
-│   Open-Meteo API  │   │   Hopsworks Cloud    │
-│  (Weather + AQI)  │   │  ┌────────────────┐  │
-│   No API key!     │   │  │ Feature Store   │  │
-└───────┬───────────┘   │  │ (aqi_features)  │  │
-        │               │  └────────┬───────┘  │
-        ▼               │           │          │
-┌───────────────────┐   │  ┌────────▼───────┐  │
-│ Feature Engineer  │──▶│  │ Model Registry │  │
-│  30+ features     │   │  │ (5 model types │  │
-│  lags, rolling,   │   │  │  × 3 horizons) │  │
-│  cyclical, ratios │   │  └────────┬───────┘  │
-└───────────────────┘   └──────────┼──────────┘
-                                   │
-                        ┌──────────▼──────────┐
-                        │   Inference Layer    │
-                        │  Best model (RMSE)   │
-                        │  + SHAP explanations │
-                        └──────┬───────┬──────┘
-                               │       │
-                    ┌──────────▼┐  ┌───▼──────────┐
-                    │ Streamlit  │  │   FastAPI     │
-                    │ Dashboard  │  │   REST API    │
-                    │ (Port 8501)│  │  (Port 8000)  │
-                    └────────────┘  └──────────────┘
-```
-
+![alt text](./architecture/image.png)
 ---
 
 ## 🌟 Key Features
