@@ -28,43 +28,74 @@ st.markdown(
 
 html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
 
-/* ---------- Global dark palette ---------- */
-.stApp { background: #0d1117; color: #e6edf3; }
+/* ---------- Global warm-light palette ---------- */
+.stApp { background: #faf9f7; color: #2d2a26; }
 
 /* ---------- Metric cards ---------- */
 .card {
-    background: linear-gradient(135deg, #161b22 0%, #1c2128 100%);
-    border: 1px solid #30363d;
-    border-radius: 12px;
+    background: #ffffff;
+    border: 1px solid #e8e5e0;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+    border-radius: 14px;
     padding: 18px 22px;
     margin-bottom: 10px;
 }
 .card-title  { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em;
-               text-transform: uppercase; color: #8b949e; margin-bottom: 4px; }
-.card-value  { font-size: 2rem; font-weight: 700; line-height: 1.1; }
-.card-sub    { font-size: 0.78rem; color: #8b949e; margin-top: 4px; }
+               text-transform: uppercase; color: #78716c; margin-bottom: 4px; }
+.card-value  { font-size: 2rem; font-weight: 700; line-height: 1.1; color: #1c1917; }
+.card-sub    { font-size: 0.78rem; color: #78716c; margin-top: 4px; }
 
 /* ---------- AQI level badge ---------- */
 .aqi-badge {
-    display: inline-block; padding: 3px 10px; border-radius: 20px;
-    font-size: 0.72rem; font-weight: 600; letter-spacing: 0.05em;
+    display: inline-block; padding: 4px 12px; border-radius: 20px;
+    font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em;
     text-transform: uppercase;
 }
 
 /* ---------- Section header ---------- */
 .section-header {
-    font-size: 0.82rem; font-weight: 600; letter-spacing: 0.1em;
-    text-transform: uppercase; color: #8b949e;
-    border-bottom: 1px solid #21262d; padding-bottom: 6px; margin: 24px 0 14px;
+    font-size: 0.85rem; font-weight: 700; letter-spacing: 0.1em;
+    text-transform: uppercase; color: #57534e;
+    border-bottom: 2px solid #e7e5e4; padding-bottom: 6px; margin: 24px 0 14px;
 }
 
 /* ---------- Alert boxes ---------- */
-.alert-good      { background:#0d2518; border-left:4px solid #3fb950; padding:10px 14px; border-radius:6px; }
-.alert-moderate  { background:#2b2000; border-left:4px solid #d29922; padding:10px 14px; border-radius:6px; }
-.alert-bad       { background:#2d0f0f; border-left:4px solid #f85149; padding:10px 14px; border-radius:6px; }
+.alert-good      { background:#ecfdf5; border-left:4px solid #10b981; padding:12px 16px; border-radius:8px; color: #064e3b; font-weight: 500; }
+.alert-moderate  { background:#fffbeb; border-left:4px solid #f59e0b; padding:12px 16px; border-radius:8px; color: #78350f; font-weight: 500; }
+.alert-bad       { background:#fef2f2; border-left:4px solid #ef4444; padding:12px 16px; border-radius:8px; color: #7f1d1d; font-weight: 500; }
 
 /* ---------- Sidebar ---------- */
-section[data-testid="stSidebar"] { background:#161b22; border-right:1px solid #21262d; }
+section[data-testid="stSidebar"] {
+    background: #ffffff !important;
+    border-right: 1px solid #e7e5e4;
+}
+section[data-testid="stSidebar"] * {
+    color: #2d2a26 !important;
+}
+section[data-testid="stSidebar"] .stCaption,
+section[data-testid="stSidebar"] .card-sub {
+    color: #78716c !important;
+}
+
+/* ---------- Buttons ---------- */
+section[data-testid="stSidebar"] button[kind="secondary"] {
+    background: #f5f0eb !important;
+    color: #44403c !important;
+    border: 1px solid #d6d3d1 !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    transition: all 0.2s ease;
+}
+section[data-testid="stSidebar"] button[kind="secondary"]:hover {
+    background: #e7e5e4 !important;
+    border-color: #a8a29e !important;
+}
+
+/* ---------- Radio pills ---------- */
+div[data-testid="stRadio"] label { color: #44403c !important; }
+
+/* ---------- Dataframe ---------- */
+.stDataFrame { border-radius: 10px; overflow: hidden; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -72,12 +103,12 @@ section[data-testid="stSidebar"] { background:#161b22; border-right:1px solid #2
 
 # ── AQI helpers ──────────────────────────────────────────────────────────────
 AQI_LEVELS = [
-    (50,  "Good",                    "#3fb950", "#0d2518"),
-    (100, "Moderate",                "#d29922", "#2b2000"),
-    (150, "Unhealthy (Sensitive)",   "#e3812b", "#2d1a00"),
-    (200, "Unhealthy",               "#f85149", "#2d0f0f"),
-    (300, "Very Unhealthy",          "#bc8cff", "#1e0d33"),
-    (500, "Hazardous",               "#ff7b72", "#2d0000"),
+    (50,  "Good",                    "#10b981", "#ecfdf5"),
+    (100, "Moderate",                "#f59e0b", "#fef3c7"),
+    (150, "Unhealthy (Sensitive)",   "#f97316", "#ffedd5"),
+    (200, "Unhealthy",               "#ef4444", "#fef2f2"),
+    (300, "Very Unhealthy",          "#8b5cf6", "#f5f3ff"),
+    (500, "Hazardous",               "#b91c1c", "#fef2f2"),
 ]
 
 def hex_to_rgba(hex_str: str, alpha: float = 0.2) -> str:
@@ -91,7 +122,7 @@ def _aqi_meta(aqi: float):
     for ceiling, label, color, bg in AQI_LEVELS:
         if aqi <= ceiling:
             return label, color, bg
-    return "Hazardous", "#ff7b72", "#2d0000"
+    return "Hazardous", "#b91c1c", "#ffffff"
 
 
 def _gauge(value: float, title: str = "Current AQI") -> go.Figure:
@@ -110,7 +141,7 @@ def _gauge(value: float, title: str = "Current AQI") -> go.Figure:
         domain={'x': [0, 1], 'y': [0, 0.75]},  # Pulls the gauge down from the title space
         title={
             "text": f"<b>{title}</b><br><span style='font-size:0.8em5;color:{color}'>{label}</span>",
-            "font": {"size": 16, "color": "#e6edf3"}
+            "font": {"size": 16, "color": "#1e293b"}
         },
         number={
             "font": {"size": 46, "color": color}, 
@@ -120,15 +151,15 @@ def _gauge(value: float, title: str = "Current AQI") -> go.Figure:
             "axis": {
                 "range": [0, 300], 
                 "tickwidth": 1,
-                "tickcolor": "#30363d", 
-                "tickfont": {"color": "#8b949e"}
+                "tickcolor": "#cbd5e1", 
+                "tickfont": {"color": "#64748b"}
             },
             "bar": {"color": color, "thickness": 0.25},
-            "bgcolor": "#161b22",
+            "bgcolor": "#f8fafc",
             "borderwidth": 0,
             "steps": steps,
             "threshold": {
-                "line": {"color": "#e6edf3", "width": 2},
+                "line": {"color": "#1e293b", "width": 2},
                 "thickness": 0.75, 
                 "value": value,
             },
@@ -138,9 +169,9 @@ def _gauge(value: float, title: str = "Current AQI") -> go.Figure:
     fig.update_layout(
         height=260, 
         margin={"t": 40, "b": 10, "l": 20, "r": 20},
-        paper_bgcolor="#0d1117", 
-        plot_bgcolor="#0d1117", 
-        font_color="#e6edf3",
+        paper_bgcolor="rgba(0,0,0,0)", 
+        plot_bgcolor="rgba(0,0,0,0)", 
+        font_color="#2d2a26",
     )
     
     return fig
@@ -171,10 +202,10 @@ def _forecast_chart(
         x=dates, y=values,
         mode="lines+markers+text",
         line={"color": "#58a6ff", "width": 3},
-        marker={"size": 10, "color": [_aqi_meta(v)[1] for v in values], "line": {"width": 2, "color": "#0d1117"}},
+        marker={"size": 10, "color": [_aqi_meta(v)[1] for v in values], "line": {"width": 2, "color": "#ffffff"}},
         text=[f"<b>{v:.0f}</b>" for v in values],
         textposition="top center",
-        textfont={"color": "#e6edf3", "size": 12},
+        textfont={"color": "#44403c", "size": 12},
         name="Forecast AQI",
     ))
 
@@ -202,12 +233,12 @@ def _forecast_chart(
     fig.update_layout(
         height=300,
         margin={"t": 10, "b": 30, "l": 10, "r": 10},
-        paper_bgcolor="#0d1117", plot_bgcolor="#0d1117",
-        font_color="#e6edf3",
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
+        font_color="#44403c",
         yaxis={"title": "AQI", "range": [0, max(300, max(values) + 30)],
-               "gridcolor": "#21262d", "zerolinecolor": "#21262d"},
-        xaxis={"gridcolor": "#21262d"},
-        legend={"bgcolor": "rgba(0,0,0,0)", "font": {"color": "#8b949e"}},
+               "gridcolor": "#e7e5e4", "zerolinecolor": "#d6d3d1"},
+        xaxis={"gridcolor": "#e7e5e4"},
+        legend={"bgcolor": "rgba(0,0,0,0)", "font": {"color": "#78716c"}},
         hovermode="x unified",
     )
     return fig
@@ -231,9 +262,9 @@ def _history_chart(df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         height=250, margin={"t": 10, "b": 30, "l": 10, "r": 10},
-        paper_bgcolor="#0d1117", plot_bgcolor="#0d1117", font_color="#e6edf3",
-        yaxis={"title": "AQI", "gridcolor": "#21262d", "zerolinecolor": "#21262d"},
-        xaxis={"gridcolor": "#21262d"},
+        paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#44403c",
+        yaxis={"title": "AQI", "gridcolor": "#e7e5e4", "zerolinecolor": "#d6d3d1"},
+        xaxis={"gridcolor": "#e7e5e4"},
         hovermode="x unified",
         showlegend=False,
     )
@@ -322,8 +353,8 @@ def main():
 
     # ── Page title ───────────────────────────────────────────────────────────
     st.markdown(
-        f"<h1 style='margin-bottom:4px'>🌬️ Pearls AQI Predictor</h1>"
-        f"<p style='color:#8b949e;margin-top:0'>Real-time air quality monitoring & ML forecasting · {city}</p>",
+        f"<h1 style='margin-bottom:4px;color:#1c1917'>🌬️ Pearls AQI Predictor</h1>"
+        f"<p style='color:#78716c;margin-top:0'>Real-time air quality monitoring & ML forecasting · {city}</p>",
         unsafe_allow_html=True,
     )
 
@@ -474,7 +505,7 @@ def main():
             for k, v in weather_items.items():
                 st.markdown(
                     f'<div class="card" style="padding:10px 14px">'
-                    f'<span style="color:#8b949e">{k}</span> &nbsp; <b>{v}</b></div>',
+                    f'<span style="color:#78716c">{k}</span> &nbsp; <b style="color:#1c1917">{v}</b></div>',
                     unsafe_allow_html=True,
                 )
 
