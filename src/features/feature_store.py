@@ -106,6 +106,7 @@ class HopsworksFeatureStore:
         td_version, _job = fv.create_training_data(
             start_time=start_date, end_time=end_date,
             description=f"Training data {start_date} to {end_date}",
+            write_options={"use_spark": True},
         )
         feature_df, label_df = fv.get_training_data(training_dataset_version=td_version)
         return pd.concat([feature_df, label_df], axis=1)

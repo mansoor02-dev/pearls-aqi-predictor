@@ -172,6 +172,7 @@ def _gauge(value: float, title: str = "Current AQI") -> go.Figure:
         paper_bgcolor="rgba(0,0,0,0)", 
         plot_bgcolor="rgba(0,0,0,0)", 
         font_color="#2d2a26",
+        hoverlabel=dict(bgcolor="#ffffff", font_color="#1c1917")
     )
     
     return fig
@@ -228,7 +229,7 @@ def _forecast_chart(
         (201, 300, "#bc8cff", ""),
     ]
     for lo, hi, clr, _ in zone_colors:
-        fig.add_hrect(y0=lo, y1=hi, fillcolor=clr + "18", line_width=0)
+        fig.add_hrect(y0=lo, y1=hi, fillcolor=hex_to_rgba(clr, 0.1), line_width=0)
 
     fig.update_layout(
         height=300,
@@ -236,10 +237,11 @@ def _forecast_chart(
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)",
         font_color="#44403c",
         yaxis={"title": "AQI", "range": [0, max(300, max(values) + 30)],
-               "gridcolor": "#e7e5e4", "zerolinecolor": "#d6d3d1"},
-        xaxis={"gridcolor": "#e7e5e4"},
+               "gridcolor": "#e7e5e4", "zerolinecolor": "#d6d3d1", "tickfont": {"color": "#78716c"}},
+        xaxis={"gridcolor": "#e7e5e4", "tickfont": {"color": "#78716c"}},
         legend={"bgcolor": "rgba(0,0,0,0)", "font": {"color": "#78716c"}},
         hovermode="x unified",
+        hoverlabel=dict(bgcolor="#ffffff", font_color="#1c1917")
     )
     return fig
 
@@ -263,10 +265,11 @@ def _history_chart(df: pd.DataFrame) -> go.Figure:
     fig.update_layout(
         height=250, margin={"t": 10, "b": 30, "l": 10, "r": 10},
         paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="#44403c",
-        yaxis={"title": "AQI", "gridcolor": "#e7e5e4", "zerolinecolor": "#d6d3d1"},
-        xaxis={"gridcolor": "#e7e5e4"},
+        yaxis={"title": "AQI", "gridcolor": "#e7e5e4", "zerolinecolor": "#d6d3d1", "tickfont": {"color": "#78716c"}},
+        xaxis={"gridcolor": "#e7e5e4", "tickfont": {"color": "#78716c"}},
         hovermode="x unified",
         showlegend=False,
+        hoverlabel=dict(bgcolor="#ffffff", font_color="#1c1917")
     )
     return fig
 
