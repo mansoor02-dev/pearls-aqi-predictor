@@ -17,7 +17,7 @@ Lahore consistently ranks among the most polluted cities globally. Accurate AQI 
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ Architecture Overview
 
 ![alt text](images/architecture.png)
 ---
