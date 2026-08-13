@@ -68,23 +68,9 @@ def health_check():
     return {"status": "healthy"}
 
 def _load_production_model(mr: HopsworksModelRegistry, horizon: int):
-    for name, (model_type, cls, ext) in CANDIDATE_MODELS.items():
-        registry_name = f"aqi_{name}_h{horizon}"
-        hw_model = mr.get_production_model(registry_name)
-        if hw_model is None:
-            continue
-
-        model_dir = hw_model.download()
-        local_path = os.path.join(model_dir, f"{name}_h{horizon}.{ext}")
-
-        instance = cls(registry_name, model_type, forecast_horizon=horizon) if model_type \
-            else cls(registry_name, forecast_horizon=horizon)
-        instance.load(local_path)
-
-        rmse = (hw_model.training_metrics or {}).get("rmse") if hasattr(hw_model, "training_metrics") else None
-        return instance, hw_model.version, rmse
-
-    return None, None, None
+    from src.inference import load_production_model
+    instance, name, version, rmse, _ = load_production_model(mr, horizon)
+    return instance, version, rmse
 
 
 def _latest_features(client, validator, city: str) -> pd.DataFrame:

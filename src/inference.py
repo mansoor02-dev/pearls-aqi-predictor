@@ -34,19 +34,33 @@ def get_hopsworks_registry() -> HopsworksModelRegistry:
 
 
 def load_production_model(mr: HopsworksModelRegistry, horizon: int):
+    best_candidate = None
+    best_rmse = float("inf")
+
     for name, (model_type, cls, ext) in CANDIDATE_MODELS.items():
         registry_name = f"aqi_{name}_h{horizon}"
-        hw_model = mr.get_production_model(registry_name)
-        if hw_model is None:
+        try:
+            hw_model = mr.get_production_model(registry_name)
+            if hw_model is None:
+                continue
+
+            metrics = getattr(hw_model, "training_metrics", {}) or {}
+            rmse = metrics.get("rmse")
+            current_rmse = float(rmse) if (rmse is not None and isinstance(rmse, (int, float))) else 999999.0
+
+            if current_rmse < best_rmse:
+                model_dir = hw_model.download()
+                instance = cls(registry_name, model_type, forecast_horizon=horizon) if model_type \
+                    else cls(registry_name, forecast_horizon=horizon)
+                instance.load(f"{model_dir}/{name}_h{horizon}.{ext}")
+                best_candidate = (instance, name, hw_model.version, rmse, model_dir)
+                best_rmse = current_rmse
+        except Exception as e:
+            logger.warning(f"Could not load candidate model '{registry_name}': {e}")
             continue
 
-        model_dir = hw_model.download()
-        instance = cls(registry_name, model_type, forecast_horizon=horizon) if model_type \
-            else cls(registry_name, forecast_horizon=horizon)
-        instance.load(f"{model_dir}/{name}_h{horizon}.{ext}")
-
-        rmse = (hw_model.training_metrics or {}).get("rmse") if hasattr(hw_model, "training_metrics") else None
-        return instance, name, hw_model.version, rmse, model_dir
+    if best_candidate is not None:
+        return best_candidate
 
     return None, None, None, None, None
 

@@ -519,13 +519,26 @@ def main():
         for day in range(1, 4):
             try:
                 _, mname, _, _, model_dir = _load_model_cached(day)
+                shap_path = None
                 if model_dir:
-                    shap_path = os.path.join(model_dir, "shap_summary.png")
-                    if os.path.exists(shap_path):
-                        st.caption(f"Model: **{mname}** · Horizon: **{day}d**")
-                        st.image(shap_path, width="stretch")
-                        shap_found = True
-                        break
+                    candidate_path = os.path.join(model_dir, "shap_summary.png")
+                    if os.path.exists(candidate_path):
+                        shap_path = candidate_path
+                    else:
+                        for root, _, files in os.walk(model_dir):
+                            if "shap_summary.png" in files:
+                                shap_path = os.path.join(root, "shap_summary.png")
+                                break
+                if not shap_path and mname:
+                    local_path = os.path.join("models", "aqi_models", f"{mname}_h{day}", "shap_summary.png")
+                    if os.path.exists(local_path):
+                        shap_path = local_path
+
+                if shap_path and os.path.exists(shap_path):
+                    st.caption(f"Model: **{mname}** · Horizon: **{day}d**")
+                    st.image(shap_path, width="stretch")
+                    shap_found = True
+                    break
             except Exception:
                 pass
 
