@@ -19,40 +19,7 @@ Lahore consistently ranks among the most polluted cities globally. Accurate AQI 
 
 ## 🏗️ System Architecture
 
-```text
-               +----------------------------------+
-               |        Open-Meteo API            |
-               | (Weather & Air Quality Pollutants)|
-               +----------------+-----------------+
-                                |
-                                v
-               +----------------------------------+
-               |    Feature Ingestion Pipeline     |
-               |  (30+ Engineered Features & AQI) |
-               +----------------+-----------------+
-                                |
-                                v
-               +----------------------------------+
-               |    Hopsworks Feature Store       |
-               |    (Feature Group & Storage)     |
-               +----------------+-----------------+
-                                |
-                   +------------+------------+
-                   |                         |
-                   v                         v
-        +--------------------+    +--------------------+
-        | Retraining Pipeline|    |  Streamlit App &   |
-        |  (5 Candidate ML   |    |    FastAPI Server  |
-        |   Architectures)   |    | (Production Models)|
-        +----------+---------+    +----------+---------+
-                   |                         ^
-                   v                         |
-        +------------------------------------+
-        |     Hopsworks Model Registry       |
-        |  (Model-as-Bundle with SHAP Plots) |
-        +------------------------------------+
-```
-
+![alt text](images/architecture.png)
 ---
 
 ## 📚 Documentation & Technical Deliverables
