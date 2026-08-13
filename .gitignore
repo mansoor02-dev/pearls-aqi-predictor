@@ -16,7 +16,7 @@ data/processed/*
 !data/processed/.gitkeep
 
 # Models
-models/*
+models/aqi_models/*
 
 
 # Environment
