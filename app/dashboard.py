@@ -531,7 +531,9 @@ def main():
 
         if not shap_found:
             st.info(
-                "SHAP explanations will appear here after the training pipeline runs and uploads them to Hopsworks.",
+                "SHAP explanations are currently unavailable for the active model "
+                "(e.g., sequence models like LSTM intentionally skip SHAP generation), "
+                "or the training pipeline has not uploaded them yet.",
                 icon="ℹ️",
             )
             # Show a placeholder feature list instead
