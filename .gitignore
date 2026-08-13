@@ -17,7 +17,6 @@ data/processed/*
 
 # Models
 models/*
-!models/.gitkeep
 
 
 # Environment
