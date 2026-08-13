@@ -21,6 +21,16 @@ Lahore consistently ranks among the world's most polluted cities. Accurate AQI f
 ## 🏗️ Architecture
 
 ![alt text](./architecture/image.png)
+
+---
+
+## 📚 Documentation
+
+For a comprehensive overview of the project, methodology, and results, please refer to:
+
+- **[Final Report](./docs/Pearls_Final_Report.pdf)** — Detailed technical documentation, model evaluation, and findings
+- **[Presentation](./docs/Pearls%20AQI%20Predictor%20-%20Presentation.pdf)** — Executive summary and key insights
+
 ---
 
 ## 🌟 Key Features
@@ -58,7 +68,7 @@ Lahore consistently ranks among the world's most polluted cities. Accurate AQI f
 - Real-time AQI gauge with color-coded health status
 - **8 pollutant cards** showing current readings (PM2.5, PM10, NO₂, O₃, CO, SO₂, UV, Temp)
 - 7-day hourly historical AQI chart with AQI zone bands
-- **3-day forecast** with 95% confidence intervals
+- **3-day forecast** with confidence intervals
 - **SHAP feature importance** visualization loaded directly from the model registry
 - Health advisory alerts for hazardous AQI levels
 

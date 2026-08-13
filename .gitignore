@@ -40,5 +40,3 @@ logs/
 *.log
 
 .cache.sqlite
-
-*.pdf
