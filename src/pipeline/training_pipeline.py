@@ -118,40 +118,44 @@ class TrainingPipeline:
         return f"models/aqi_models/{model_name}"
 
     def _generate_shap_explanations(self, model, X_test, output_dir: str) -> None:
-        """SHAP on the DELTA prediction (model.model, not model.predict) — the
-        reconstruction step (+ current_aqi) is a constant shift per row and
-        isn't informative to attribute; the delta model is what's actually
-        making the interesting decision."""
+        """SHAP on the DELTA prediction (model.model, not model.predict)."""
         try:
             import shap
         except ImportError:
             self.logger.warning("shap not installed — skipping explanation generation")
             return
 
-        sample = X_test[:200] if hasattr(X_test, "__len__") and len(X_test) > 200 else X_test
-
         if isinstance(model, LSTMAQIModel):
-            self.logger.info("Skipping SHAP for LSTM — needs GradientExplainer for sequence input"); 
+            self.logger.info("Skipping SHAP for LSTM — sequence inputs require specialized explainers")
             return
 
-        if isinstance(model, SklearnAQIModel) and model.model_type in ("random_forest", "xgboost"):
-            explainer = shap.TreeExplainer(model.model)
-            shap_values = explainer.shap_values(sample)
-        elif isinstance(model, SklearnAQIModel) and model.model_type == "linear":
-            explainer = shap.LinearExplainer(model.model, sample)
-            shap_values = explainer.shap_values(sample)
-        else:
-            def torch_predict(x):
-                model.model.eval()
-                with torch.no_grad():
-                    return model.model(torch.tensor(x, dtype=torch.float32)).cpu().numpy().ravel()
-            background = sample[:50]
-            explainer = shap.KernelExplainer(torch_predict, background)
-            shap_values = explainer.shap_values(sample)
+        try:
+            sample = X_test[:200] if hasattr(X_test, "__len__") and len(X_test) > 200 else X_test
+            sample_np = sample.numpy() if hasattr(sample, "numpy") else sample
 
-        plt.figure()
-        shap.summary_plot(shap_values, sample, feature_names=getattr(model, "feature_names_", None), show=False)
-        plt.tight_layout()
-        plt.savefig(f"{output_dir}/shap_summary.png")
-        plt.close()
-        self.logger.info(f"Saved SHAP summary to {output_dir}")
+            if isinstance(model, SklearnAQIModel) and model.model_type in ("random_forest", "xgboost"):
+                explainer = shap.TreeExplainer(model.model)
+                shap_values = explainer.shap_values(sample_np)
+            elif isinstance(model, SklearnAQIModel) and model.model_type == "linear":
+                explainer = shap.LinearExplainer(model.model, sample_np)
+                shap_values = explainer.shap_values(sample_np)
+            else:
+                def torch_predict(x):
+                    model.model.eval()
+                    with torch.no_grad():
+                        t_x = torch.tensor(x, dtype=torch.float32) if not isinstance(x, torch.Tensor) else x
+                        return model.model(t_x).cpu().numpy().ravel()
+                background = sample_np[:20]
+                explainer = shap.KernelExplainer(torch_predict, background)
+                eval_sample = sample_np[:30]
+                shap_values = explainer.shap_values(eval_sample)
+                sample_np = eval_sample
+
+            plt.figure()
+            shap.summary_plot(shap_values, sample_np, feature_names=getattr(model, "feature_names_", None), show=False)
+            plt.tight_layout()
+            plt.savefig(f"{output_dir}/shap_summary.png")
+            plt.close()
+            self.logger.info(f"Saved SHAP summary to {output_dir}")
+        except Exception as err:
+            self.logger.warning(f"Failed to generate SHAP summary for {model.model_name}: {err}")

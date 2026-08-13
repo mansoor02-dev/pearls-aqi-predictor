@@ -305,7 +305,7 @@ def _fetch_current(city: str) -> dict:
     return client.fetch_current(city)
 
 
-@st.cache_data(ttl=86400, show_spinner=False)
+@st.cache_data(ttl=3600, show_spinner=False)
 def _load_model_cached(horizon: int):
     """Download production model once per day per horizon."""
     from src.inference import load_production_model
