@@ -16,9 +16,9 @@ data/processed/*
 !data/processed/.gitkeep
 
 # Models
-models/*.joblib
-models/*.h5
-models/*.keras
+models/*
+!models/.gitkeep
+
 
 # Environment
 .env
