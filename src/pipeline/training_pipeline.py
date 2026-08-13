@@ -75,13 +75,9 @@ class TrainingPipeline:
                         y_naive=data["current_aqi_test"],   # naive persistence baseline
                     )
 
-                    horizon_results[name] = metrics
-                    horizon_data[name] = data
-                    trained_models[name] = model
-
                     save_dir = self._save_path(model_name, model)
                     os.makedirs(save_dir, exist_ok=True)
-                    ext = "joblib" if model.model_type in ["linear", "random_forest", "xgboost"] else "pt"
+                    ext = "joblib" if isinstance(model, SklearnAQIModel) else "pt"
                     model_file = f"{save_dir}/{model_name}.{ext}"
                     model.save(model_file)
                     
@@ -93,6 +89,9 @@ class TrainingPipeline:
                         metrics={k: v for k, v in metrics.items() if isinstance(v, (int, float))},
                     )
                     registered_versions[name] = registered.version
+                    horizon_results[name] = metrics
+                    horizon_data[name] = data
+                    trained_models[name] = model
                 except Exception as e:
                     self.logger.error(f"Training failed for '{name}' (h={horizon}): {e}", exc_info=True)
                     continue   # one model failing shouldn't lose the rest
